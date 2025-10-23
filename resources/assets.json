@@ -1,0 +1,222 @@
+{
+    "spritesheets": [
+        {
+            "id": "player_base",
+            "path": "resources/textures/player_base.png",
+            "columns": 9,
+            "rows": 56
+        },
+        {
+            "id": "player_hand",
+            "path": "resources/textures/player_hand.png",
+            "columns": 9,
+            "rows": 56
+        },
+        {
+            "id": "farmer",
+            "path": "resources/textures/farmer.png",
+            "columns": 6,
+            "rows": 13
+        }
+    ],
+    "animations": [
+        {
+            "id": "player_base_idle_down",
+            "spritesheet_id": "player_base",
+            "frame_sequence": {
+                "row": 0,
+                "count": 6
+            }
+        },
+        {
+            "id": "player_base_idle_right",
+            "spritesheet_id": "player_base",
+            "frame_sequence": {
+                "row": 1,
+                "count": 6
+            }
+        },
+        {
+            "id": "player_base_idle_left",
+            "spritesheet_id": "player_base",
+            "frame_sequence": {
+                "row": 1,
+                "count": 6
+            },
+            "flip": true
+        },
+        {
+            "id": "player_base_idle_up",
+            "spritesheet_id": "player_base",
+            "frame_sequence": {
+                "row": 2,
+                "count": 6
+            }
+        },
+        {
+            "id": "player_base_walk_down",
+            "spritesheet_id": "player_base",
+            "frame_sequence": {
+                "row": 3,
+                "count": 6
+            }
+        },
+        {
+            "id": "player_base_walk_right",
+            "spritesheet_id": "player_base",
+            "frame_sequence": {
+                "row": 4,
+                "count": 6
+            }
+        },
+        {
+            "id": "player_base_walk_left",
+            "spritesheet_id": "player_base",
+            "frame_sequence": {
+                "row": 4,
+                "count": 6
+            },
+            "flip": true
+        },
+        {
+            "id": "player_base_walk_up",
+            "spritesheet_id": "player_base",
+            "frame_sequence": {
+                "row": 5,
+                "count": 6
+            }
+        },
+        {
+            "id": "player_hand_idle_down",
+            "spritesheet_id": "player_hand",
+            "frame_sequence": {
+                "row": 0,
+                "count": 6
+            }
+        },
+        {
+            "id": "player_hand_idle_right",
+            "spritesheet_id": "player_hand",
+            "frame_sequence": {
+                "row": 1,
+                "count": 6
+            }
+        },
+        {
+            "id": "player_hand_idle_left",
+            "spritesheet_id": "player_hand",
+            "frame_sequence": {
+                "row": 1,
+                "count": 6
+            },
+            "flip": true
+        },
+        {
+            "id": "player_hand_idle_up",
+            "spritesheet_id": "player_hand",
+            "frame_sequence": {
+                "row": 2,
+                "count": 6
+            }
+        },
+        {
+            "id": "player_hand_walk_down",
+            "spritesheet_id": "player_hand",
+            "frame_sequence": {
+                "row": 3,
+                "count": 6
+            }
+        },
+        {
+            "id": "player_hand_walk_right",
+            "spritesheet_id": "player_hand",
+            "frame_sequence": {
+                "row": 4,
+                "count": 6
+            }
+        },
+        {
+            "id": "player_hand_walk_left",
+            "spritesheet_id": "player_hand",
+            "frame_sequence": {
+                "row": 4,
+                "count": 6
+            },
+            "flip": true
+        },
+        {
+            "id": "player_hand_walk_up",
+            "spritesheet_id": "player_hand",
+            "frame_sequence": {
+                "row": 5,
+                "count": 6
+            }
+        },
+        {
+            "id": "farmer_idle_down",
+            "spritesheet_id": "farmer",
+            "frame_sequence": {
+                "row": 0,
+                "count": 6
+            }
+        },
+        {
+            "id": "farmer_idle_right",
+            "spritesheet_id": "farmer",
+            "frame_sequence": {
+                "row": 1,
+                "count": 6
+            }
+        },
+        {
+            "id": "farmer_idle_left",
+            "spritesheet_id": "farmer",
+            "frame_sequence": {
+                "row": 1,
+                "count": 6
+            },
+            "flip": true
+        },
+        {
+            "id": "farmer_idle_up",
+            "spritesheet_id": "farmer",
+            "frame_sequence": {
+                "row": 2,
+                "count": 6
+            }
+        },
+        {
+            "id": "farmer_walk_down",
+            "spritesheet_id": "farmer",
+            "frame_sequence": {
+                "row": 3,
+                "count": 6
+            }
+        },
+        {
+            "id": "farmer_walk_right",
+            "spritesheet_id": "farmer",
+            "frame_sequence": {
+                "row": 4,
+                "count": 6
+            }
+        },
+        {
+            "id": "farmer_walk_left",
+            "spritesheet_id": "farmer",
+            "frame_sequence": {
+                "row": 4,
+                "count": 6
+            },
+            "flip": true
+        },
+        {
+            "id": "farmer_walk_up",
+            "spritesheet_id": "farmer",
+            "frame_sequence": {
+                "row": 5,
+                "count": 6
+            }
+        }
+    ]
+}

@@ -1,20 +1,20 @@
-use hecs::World;
 use macroquad::prelude::*;
 use ::rand::{seq::IteratorRandom, thread_rng, Rng};
-use crate::{asset_server::AssetServer, components::*};
+use crate::context::Context;
+use crate::components::*;
 use crate::components::{Behavior, Direction,State};
 
-pub fn movement_system(world: &mut World, dt: f32) {
-    for (_, (transform, velocity, speed)) in world.query::<(&mut Transform, &mut Velocity, &Speed)>().iter() {
+pub fn movement_system(ctx: &mut Context) {
+    for (_, (transform, velocity, speed)) in ctx.world.query::<(&mut Transform, &mut Velocity, &Speed)>().iter() {
         if velocity.0.length() > 0.0 {
             velocity.0 = velocity.0.normalize();
         }
-        transform.position += velocity.0 * speed.0 * dt;
+        transform.position += velocity.0 * speed.0 * ctx.dt;
     }
 }
 
-pub fn player_update(world: &mut World) {
-    for (_, (velocity, state, direction, animation_comp)) in world.query::<(&mut Velocity, &mut StateComponent, &mut DirectionComponent, &mut AnimationComponent)>().with::<&PlayerTag>().iter() {
+pub fn player_update(ctx: &mut Context) {
+    for (_, (velocity, state, direction, animation_comp)) in ctx.world.query::<(&mut Velocity, &mut StateComponent, &mut DirectionComponent, &mut AnimationComponent)>().with::<&PlayerTag>().iter() {
         velocity.0 = Vec2::ZERO; // Réinitialiser à chaque frame
         let mut moving = false;
         
@@ -53,14 +53,14 @@ pub fn player_update(world: &mut World) {
     }
 }
 
-pub fn npc_behavior_system(world: &mut World, dt: f32) {
-    for (_, (transform, npc, behavior, state, direction, speed, animation_comp)) in world.query::<(&mut Transform, &mut NpcTag, &BehaviorComponent, &mut StateComponent, &mut DirectionComponent, &Speed, &mut AnimationComponent)>().iter() {
+pub fn npc_behavior_system(ctx: &mut Context) {
+    for (_, (transform, npc, behavior, state, direction, speed, animation_comp)) in ctx.world.query::<(&mut Transform, &mut NpcTag, &BehaviorComponent, &mut StateComponent, &mut DirectionComponent, &Speed, &mut AnimationComponent)>().iter() {
         match behavior.0 {
             Behavior::Stand => {
                 state.0 = State::Idle;
             },
             Behavior::Wander => {
-                npc.wander_time += dt;
+                npc.wander_time += ctx.dt;
                 let mut rng = thread_rng();
 
                 if npc.wander_time >= npc.wander_target_duration {
@@ -85,7 +85,7 @@ pub fn npc_behavior_system(world: &mut World, dt: f32) {
                         Direction::Left => vec2(-1.0, 0.0),
                         Direction::Right => vec2(1.0, 0.0)
                     };
-                    transform.position += direction_vec * speed.0 * dt;
+                    transform.position += direction_vec * speed.0 * ctx.dt;
                 }
             }
         }
@@ -94,17 +94,17 @@ pub fn npc_behavior_system(world: &mut World, dt: f32) {
     }
 }
 
-pub fn update_animations(world: &mut World, dt: f32, asset_server: &mut AssetServer) {
-    for (_, animation_comp) in world.query::<&AnimationComponent>().iter() {
-        if let Some(animation) = asset_server.get_animation_mut(&animation_comp.0) {
-            animation.update(dt);
+pub fn update_animations(ctx: &mut Context) {
+    for (_, animation_comp) in ctx.world.query::<&AnimationComponent>().iter() {
+        if let Some(animation) = ctx.asset_server.get_animation_mut(&animation_comp.0) {
+            animation.update(ctx.dt);
         }
     }
 }
 
-pub fn render_system(world: &mut World, asset_server: &mut AssetServer) {
-    for (_, (animation_comp, transform)) in world.query::<(&AnimationComponent, &Transform)>().iter() {
-        if let Some(animation) = asset_server.get_animation_mut(&animation_comp.0) {
+pub fn render_system(ctx: &mut Context) {
+    for (_, (animation_comp, transform)) in ctx.world.query::<(&AnimationComponent, &Transform)>().iter() {
+        if let Some(animation) = ctx.asset_server.get_animation_mut(&animation_comp.0) {
             animation.draw(transform.position.x, transform.position.y);
         }
     }

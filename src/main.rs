@@ -17,6 +17,15 @@ use crate::context::Context;
 use crate::schedule::{Schedule, Stage};
 use systems::*;
 
+fn window_conf() -> Conf {
+    Conf {
+        window_title: "Fantasy Craft".to_owned(),
+        window_width: 1920,
+        window_height: 1080,
+        ..Default::default()
+    }
+}
+
 pub fn setup_system(ctx: &mut Context) {
     ctx.world.spawn((
         Transform::default(),
@@ -46,7 +55,7 @@ pub fn setup_system(ctx: &mut Context) {
     ));
 }
 
-#[macroquad::main("Fantasy Craft")]
+#[macroquad::main(window_conf)]
 async fn main() {
     let mut asset_server = AssetServer::new();
 

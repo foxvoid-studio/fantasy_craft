@@ -25,13 +25,13 @@ pub fn player_update(ctx: &mut Context) {
             moving = true;
         }
 
-        if is_key_down(KeyCode::Left) || is_key_down(KeyCode::A) { 
+        if is_key_down(KeyCode::Left) || is_key_down(KeyCode::Q) { 
             velocity.0.x = -1.0; 
             direction.0 = Direction::Left;
             moving = true;
         }
 
-        if is_key_down(KeyCode::Up) || is_key_down(KeyCode::W) { 
+        if is_key_down(KeyCode::Up) || is_key_down(KeyCode::Z) { 
             velocity.0.y = -1.0; 
             if !is_key_down(KeyCode::Right) && !is_key_down(KeyCode::Left) {
                 direction.0 = Direction::Up;

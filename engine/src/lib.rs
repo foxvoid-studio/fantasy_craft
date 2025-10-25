@@ -8,3 +8,4 @@ pub mod schedule;
 pub mod context;
 pub mod tiled_map;
 pub mod physics;
+pub mod app;

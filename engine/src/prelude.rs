@@ -7,3 +7,4 @@ pub use crate::physics::{collider_debug_render_system, physics_system, BodyType,
 pub use crate::schedule::{Schedule, Stage};
 pub use crate::tiled_map::{MainTileMap, TileMapComponent};
 pub use crate::systems::*;
+pub use crate::app::App;

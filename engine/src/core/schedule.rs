@@ -10,7 +10,8 @@ pub enum Stage {
     Update,
     PostUpdate,
     Render,
-    PostRender
+    PostRender,
+    GuiRender
 }
 
 pub struct Schedule {

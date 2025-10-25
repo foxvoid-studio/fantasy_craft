@@ -19,3 +19,6 @@ pub use crate::graphics::tiled_map::plugins::*;
 pub use crate::graphics::tiled_map::serializers::*;
 pub use crate::graphics::tiled_map::systems::*;
 pub use crate::graphics::tiled_map::tiled_map::*;
+pub use crate::gui::plugins::*;
+pub use crate::gui::systems::*;
+pub use crate::gui::components::*;

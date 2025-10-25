@@ -1,8 +1,8 @@
 use macroquad::prelude::*;
-use engine::prelude::*;
+use engine::{gui::components::TextDisplay, prelude::*};
 use ::rand::{seq::IteratorRandom, thread_rng, Rng};
 
-use crate::components::{Behavior, BehaviorComponent, NpcTag, PlayerTag};
+use crate::components::{Behavior, BehaviorComponent, FpsDisplay, NpcTag, PlayerTag};
 
 pub fn npc_behavior_system(ctx: &mut Context) {
     for (_, (transform, npc, behavior, state, direction, speed, animation_comp)) in ctx.world.query::<(&mut Transform, &mut NpcTag, &BehaviorComponent, &mut StateComponent, &mut DirectionComponent, &Speed, &mut AnimationComponent)>().iter() {
@@ -82,5 +82,17 @@ pub fn player_update(ctx: &mut Context) {
         // 2. Mettre à jour l'état
         state.0 = if moving { State::Walk } else { State::Idle };
         animation_comp.0 = format!("player_base_{}_{}", state.0.to_str(), direction.0.to_str());
+    }
+}
+
+pub fn fps_display_update(ctx: &mut Context) {
+    for (_, (fps_display, text_display)) in ctx.world.query::<(&mut FpsDisplay, &mut TextDisplay)>().iter() {
+        fps_display.fps_timer += ctx.dt;
+
+        if fps_display.fps_timer >= 1.0 {
+            fps_display.displayed_fps = get_fps();
+            fps_display.fps_timer = 0.0;
+            text_display.text = format!("FPS: {}", fps_display.displayed_fps);
+        }
     }
 }

@@ -45,17 +45,8 @@ impl App {
 
         self.schedule.run_stage(Stage::StartUp, &mut self.context);
 
-        let mut fps_timer: f32 = 0.0;
-        let mut displayed_fps: i32 = get_fps();
-
         loop {
             self.context.dt = get_frame_time();
-            fps_timer += self.context.dt;
-
-            if fps_timer >= 1.0 {
-                displayed_fps = get_fps();
-                fps_timer = 0.0;
-            }
 
             clear_background(LIGHTGRAY);
 
@@ -65,8 +56,8 @@ impl App {
             self.schedule.run_stage(Stage::PostRender, &mut self.context);
 
             set_default_camera();
-            let fps_text = format!("FPS: {}", displayed_fps);
-            draw_text(&fps_text, 10.0, 25.0, 30.0, BLACK);
+
+            self.schedule.run_stage(Stage::GuiRender, &mut self.context);
 
             next_frame().await
         }

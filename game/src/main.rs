@@ -5,7 +5,7 @@ mod components;
 mod systems;
 mod plugins;
 
-use crate::{components::{Behavior, BehaviorComponent, NpcTag, PlayerTag}, plugins::{NpcPlugin, PlayerPlugin}};
+use crate::{components::{Behavior, BehaviorComponent, FpsDisplay, NpcTag, PlayerTag}, plugins::{NpcPlugin, PlayerPlugin}, systems::fps_display_update};
 
 fn window_conf() -> Conf {
     Conf {
@@ -19,6 +19,18 @@ fn window_conf() -> Conf {
 pub fn setup_system(ctx: &mut Context) {
     let map = ctx.asset_server.get_map("test_map").unwrap();
     let map_center = Vec2::new((map.width as f32 * map.tile_width as f32) / 2.0, (map.height as f32 * map.tile_height as f32) / 2.0);
+
+    ctx.world.spawn((
+        Transform {
+            position: vec2(10.0, 25.0),
+            ..Default::default()
+        },
+        FpsDisplay { fps_timer: 0.0, displayed_fps: get_fps() },
+        TextDisplay {
+            text: "FPS: 60".to_string(),
+            ..Default::default()
+        }
+    ));
 
     ctx.world.spawn((
         Transform {
@@ -88,7 +100,9 @@ async fn main() {
         .add_plugin(AnimationPlugin)
         .add_plugin(PlayerPlugin)
         .add_plugin(NpcPlugin)
-        .add_system(Stage::StartUp, setup_system);
+        .add_plugin(GuiPlugin)
+        .add_system(Stage::StartUp, setup_system)
+        .add_system(Stage::Update, fps_display_update);
 
     app.run().await
 }

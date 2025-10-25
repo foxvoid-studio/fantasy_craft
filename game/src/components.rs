@@ -19,3 +19,9 @@ pub struct NpcTag {
     pub wander_time: f32,
     pub wander_target_duration: f32
 }
+
+#[derive(Debug)]
+pub struct FpsDisplay {
+    pub fps_timer: f32,
+    pub displayed_fps: i32
+}

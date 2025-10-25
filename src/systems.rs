@@ -103,7 +103,7 @@ pub fn update_animations(ctx: &mut Context) {
     }
 }
 
-pub fn render_system(ctx: &mut Context) {
+pub fn tiled_map_render_system(ctx: &mut Context) {
     for (_, tileset_comp) in ctx.world.query::<&TileMapComponent>().iter() {
         if let Some(rendered_map) = ctx.asset_server.get_renderer_map(&tileset_comp.name) {
             draw_texture_ex(
@@ -118,7 +118,9 @@ pub fn render_system(ctx: &mut Context) {
             );
         }
     }
+}
 
+pub fn entities_render_system(ctx: &mut Context) {
     for (_, (animation_comp, transform)) in ctx.world.query::<(&AnimationComponent, &Transform)>().iter() {
         if let Some(animation) = ctx.asset_server.get_animation_mut(&animation_comp.0) {
             animation.draw(transform.position.x, transform.position.y);

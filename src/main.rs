@@ -114,7 +114,8 @@ async fn main() {
 
     schedule.add_system(Stage::PostUpdate, update_camera);
 
-    schedule.add_system(Stage::Render, render_system);
+    schedule.add_system(Stage::Render, tiled_map_render_system);
+    schedule.add_system(Stage::Render, entities_render_system);
 
     let mut fps_timer: f32 = 0.0;
     let mut displayed_fps: i32 = get_fps();
@@ -135,6 +136,9 @@ async fn main() {
         schedule.run_stage(Stage::Update, &mut context);
         schedule.run_stage(Stage::PostUpdate, &mut context);
         schedule.run_stage(Stage::Render, &mut context);
+
+        // unset camera to draw gui
+        set_default_camera();
 
         let fps_text = format!("FPS: {}", displayed_fps);
         draw_text(&fps_text, 10.0, 25.0, 30.0, BLACK);

@@ -1,8 +1,9 @@
 use hecs::World;
 use macroquad::prelude::*;
-use crate::context::Context;
-use crate::schedule::{Schedule, Stage, System};
-use crate::asset_server::AssetServer;
+use crate::core::context::Context;
+use crate::core::schedule::{Schedule, Stage, System};
+use crate::core::asset_server::AssetServer;
+use crate::core::plugins::Plugin;
 
 pub struct App {
     pub context: Context,
@@ -31,6 +32,11 @@ impl App {
         self
     }
 
+    pub fn add_plugin<T: Plugin>(&mut self, plugin: T) -> &mut Self {
+        plugin.build(self);
+        self
+    }
+
     pub async fn run(mut self) {
         self.context.asset_server
             .load_assets_from_file("resources/assets.json")
@@ -56,6 +62,7 @@ impl App {
             self.schedule.run_stage(Stage::Update, &mut self.context);
             self.schedule.run_stage(Stage::PostUpdate, &mut self.context);
             self.schedule.run_stage(Stage::Render, &mut self.context);
+            self.schedule.run_stage(Stage::PostRender, &mut self.context);
 
             set_default_camera();
             let fps_text = format!("FPS: {}", displayed_fps);

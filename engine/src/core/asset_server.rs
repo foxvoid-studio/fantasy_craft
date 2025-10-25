@@ -2,6 +2,10 @@ use std::{collections::HashMap, sync::Arc};
 use macroquad::prelude::*;
 use serde::Deserialize;
 use std::path::{Path, PathBuf};
+use crate::graphics::animations::{Animation, AnimationKeyFrame};
+use crate::graphics::sprites::{Spritesheet};
+use crate::graphics::tiled_map::tiled_map::{Tileset, TileMap, RenderedTileMap};
+use crate::graphics::tiled_map::serializers::{LayerData, TiledMapData};
 
 #[derive(Deserialize)]
 struct MapData {
@@ -38,8 +42,6 @@ struct AssetFileData {
     spritesheets: Vec<SpritesheetData>,
     animations: Vec<AnimationData>,
 }
-
-use crate::{assets::{Animation, AnimationKeyFrame, Spritesheet}, tiled_map::{LayerData, RenderedTileMap, TileMap, TiledMapData, Tileset}};
 
 // --- AssetServer ---
 pub struct AssetServer {

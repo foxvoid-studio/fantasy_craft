@@ -1,54 +1,19 @@
 use hecs::Entity;
 use macroquad::prelude::*;
 use parry2d::query;
-use parry2d::shape::{SharedShape, Cuboid};
-use parry2d::na::{Isometry2, Vector2};
 
-use crate::components::Transform;
-use crate::context::Context;
+use crate::physics::components::Transform;
+use crate::core::context::Context;
+use crate::physics::components::{BodyType, Collider, RigidBody, Velocity, Speed};
+use crate::physics::helpers::make_isometry;
 
-#[derive(Debug, Clone, Copy)]
-#[allow(dead_code)]
-pub enum BodyType {
-    Static,
-    Dynamic,
-    Kinematic
-}
-
-#[derive(Debug)]
-pub struct RigidBody {
-    pub body_type: BodyType,
-    pub velocity: Vec2
-}
-
-impl RigidBody {
-    pub fn new(body_type: BodyType) -> Self {
-        Self {
-            body_type,
-            velocity: Vec2::ZERO
+pub fn movement_system(ctx: &mut Context) {
+    for (_, (transform, velocity, speed)) in ctx.world.query::<(&mut Transform, &mut Velocity, &Speed)>().iter() {
+        if velocity.0.length() > 0.0 {
+            velocity.0 = velocity.0.normalize();
         }
+        transform.position += velocity.0 * speed.0 * ctx.dt;
     }
-}
-
-#[derive(Debug)]
-#[allow(dead_code)]
-pub struct Collider {
-    pub shape: SharedShape,
-    pub half_extents: Vec2
-}
-
-impl Collider {
-    pub fn new_box(width: f32, height: f32) -> Self {
-        Self {
-            shape: SharedShape::new(Cuboid::new(Vector2::new(width / 2.0, height / 2.0))),
-            half_extents: vec2(width / 2.0, height / 2.0)
-        }
-    }
-}
-
-/// Helper to convert Transform + Collider to Isometry2 (used by Parry)
-pub fn make_isometry(position: Vec2) -> Isometry2<f32> {
-    Isometry2::new(Vector2::new(position.x, position.y), 0.0)
 }
 
 pub fn physics_system(ctx: &mut Context) {

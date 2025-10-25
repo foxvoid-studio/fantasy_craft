@@ -1,6 +1,12 @@
 use macroquad::prelude::*;
 use engine::prelude::*;
 
+mod components;
+mod systems;
+mod plugins;
+
+use crate::{components::{Behavior, BehaviorComponent, NpcTag, PlayerTag}, plugins::{NpcPlugin, PlayerPlugin}};
+
 fn window_conf() -> Conf {
     Conf {
         window_title: "Fantasy Craft".to_owned(),
@@ -76,16 +82,13 @@ async fn main() {
     let mut app = App::new(window_conf());
 
     app
-        .add_system(Stage::StartUp, setup_system)
-        .add_system(Stage::Update, player_update)
-        .add_system(Stage::Update, npc_behavior_system)
-        .add_system(Stage::Update, movement_system)
-        .add_system(Stage::Update, update_animations)
-        .add_system(Stage::PostUpdate, physics_system)
-        .add_system(Stage::PostUpdate, update_camera)
-        .add_system(Stage::Render, tiled_map_render_system)
-        .add_system(Stage::Render, entities_render_system)
-        .add_system(Stage::Render, collider_debug_render_system);
+        .add_plugin(PhysicsPlugin)
+        .add_plugin(Camera2dPlugin)
+        .add_plugin(TiledMapPlugin)
+        .add_plugin(AnimationPlugin)
+        .add_plugin(PlayerPlugin)
+        .add_plugin(NpcPlugin)
+        .add_system(Stage::StartUp, setup_system);
 
     app.run().await
 }

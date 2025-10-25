@@ -1,17 +1,6 @@
 use macroquad::prelude::*;
-use crate::{components::Transform, context::Context, tiled_map::{MainTileMap, TileMapComponent}};
-
-#[derive(Debug)]
-pub struct CameraComponent {
-    pub lerp_factor: f32,
-    pub zoom: f32
-}
-
-#[derive(Debug)]
-pub struct MainCamera;
-
-#[derive(Debug)]
-pub struct CameraTarget;
+use crate::{physics::components::Transform, core::context::Context, graphics::tiled_map::components::{MainTileMap, TileMapComponent}};
+use crate::camera::camera2d::components::{CameraTarget, CameraComponent, MainCamera};
 
 pub fn update_camera(ctx: &mut Context) {
     let mut target_position: Option<Vec2> = None;

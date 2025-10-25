@@ -1,11 +1,6 @@
 pub mod prelude;
-pub mod assets;
-pub mod asset_server;
 pub mod camera;
-pub mod components;
-pub mod systems;
-pub mod schedule;
-pub mod context;
-pub mod tiled_map;
 pub mod physics;
-pub mod app;
+pub mod utils;
+pub mod core;
+pub mod graphics;

@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use crate::context::Context;
+use crate::core::context::Context;
 
 pub type System = fn(&mut Context);
 
@@ -9,7 +9,8 @@ pub enum Stage {
     StartUp,
     Update,
     PostUpdate,
-    Render
+    Render,
+    PostRender
 }
 
 pub struct Schedule {

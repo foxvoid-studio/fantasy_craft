@@ -3,6 +3,7 @@ use ::rand::{seq::IteratorRandom, thread_rng, Rng};
 use crate::context::Context;
 use crate::components::*;
 use crate::components::{Behavior, Direction,State};
+use crate::tiled_map::TileMapComponent;
 
 pub fn movement_system(ctx: &mut Context) {
     for (_, (transform, velocity, speed)) in ctx.world.query::<(&mut Transform, &mut Velocity, &Speed)>().iter() {
@@ -103,17 +104,19 @@ pub fn update_animations(ctx: &mut Context) {
 }
 
 pub fn render_system(ctx: &mut Context) {
-    if let Some(rendered_map) = ctx.asset_server.get_renderer_map("test_map") {
-        draw_texture_ex(
-            &rendered_map.texture.texture,
-            0.0,
-            0.0,
-            WHITE,
-            DrawTextureParams {
-                dest_size: Some(vec2(rendered_map.width, rendered_map.height)),
-                ..Default::default()
-            }
-        );
+    for (_, tileset_comp) in ctx.world.query::<&TileMapComponent>().iter() {
+        if let Some(rendered_map) = ctx.asset_server.get_renderer_map(&tileset_comp.name) {
+            draw_texture_ex(
+                &rendered_map.texture.texture,
+                0.0,
+                0.0,
+                WHITE,
+                DrawTextureParams {
+                    dest_size: Some(vec2(rendered_map.width, rendered_map.height)),
+                    ..Default::default()
+                }
+            );
+        }
     }
 
     for (_, (animation_comp, transform)) in ctx.world.query::<(&AnimationComponent, &Transform)>().iter() {

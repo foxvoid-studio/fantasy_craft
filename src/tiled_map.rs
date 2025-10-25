@@ -136,3 +136,8 @@ impl TileMap {
         }
     }
 }
+
+#[derive(Debug)]
+pub struct TileMapComponent {
+    pub name: String
+}

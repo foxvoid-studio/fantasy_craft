@@ -16,6 +16,7 @@ use crate::components::{AnimationComponent, Behavior, BehaviorComponent, Directi
 use crate::components::{Direction, State};
 use crate::context::Context;
 use crate::schedule::{Schedule, Stage};
+use crate::tiled_map::TileMapComponent;
 use systems::*;
 
 fn window_conf() -> Conf {
@@ -30,6 +31,12 @@ fn window_conf() -> Conf {
 pub fn setup_system(ctx: &mut Context) {
     let map = ctx.asset_server.get_map("test_map").unwrap();
     let map_center = Vec2::new((map.width as f32 * map.tile_width as f32) / 2.0, (map.height as f32 * map.tile_height as f32) / 2.0);
+
+    ctx.world.spawn((
+        TileMapComponent{
+            name: "test_map".to_string()
+        },
+    ));
 
     ctx.world.spawn((
         Transform {

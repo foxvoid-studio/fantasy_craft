@@ -1,3 +1,4 @@
+pub mod prelude;
 pub mod assets;
 pub mod asset_server;
 pub mod camera;

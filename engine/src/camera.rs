@@ -2,7 +2,7 @@ use macroquad::prelude::*;
 use crate::{components::Transform, context::Context, tiled_map::{MainTileMap, TileMapComponent}};
 
 #[derive(Debug)]
-pub struct Camera {
+pub struct CameraComponent {
     pub lerp_factor: f32,
     pub zoom: f32
 }
@@ -35,7 +35,7 @@ pub fn update_camera(ctx: &mut Context) {
         break;
     }
 
-    for (_entity, (camera_comp, transform, _main)) in ctx.world.query::<(&mut Camera, &mut Transform, &MainCamera)>().iter() {
+    for (_entity, (camera_comp, transform, _main)) in ctx.world.query::<(&mut CameraComponent, &mut Transform, &MainCamera)>().iter() {
         let lerp_speed = 1.0 - (-camera_comp.lerp_factor * ctx.dt).exp();
 
         let mut desired_position = transform.position.lerp(target_position, lerp_speed);

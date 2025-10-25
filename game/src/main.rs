@@ -1,15 +1,6 @@
 use hecs::World;
 use macroquad::prelude::*;
-
-use engine::asset_server::AssetServer;
-use engine::camera::{update_camera, Camera, CameraTarget, MainCamera};
-use engine::components::{AnimationComponent, Behavior, BehaviorComponent, DirectionComponent, NpcTag, PlayerTag, Speed, StateComponent, Transform, Velocity};
-use engine::components::{Direction, State};
-use engine::context::Context;
-use engine::physics::{collider_debug_render_system, physics_system, BodyType, Collider, RigidBody};
-use engine::schedule::{Schedule, Stage};
-use engine::tiled_map::{MainTileMap, TileMapComponent};
-use engine::systems::*;
+use engine::prelude::*;
 
 fn window_conf() -> Conf {
     Conf {
@@ -29,7 +20,7 @@ pub fn setup_system(ctx: &mut Context) {
             position: map_center,
             ..Default::default()
         },
-        Camera {
+        CameraComponent {
             lerp_factor: 8.0,
             zoom: 1.5
         },

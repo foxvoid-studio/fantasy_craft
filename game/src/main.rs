@@ -5,7 +5,7 @@ mod components;
 mod systems;
 mod plugins;
 
-use crate::{components::{Behavior, BehaviorComponent, FpsDisplay, NpcTag, PlayerTag}, plugins::{NpcPlugin, PlayerPlugin}, systems::fps_display_update};
+use crate::{components::{AnimationPrefix, Behavior, BehaviorComponent, FpsDisplay, NpcTag, PlayerTag}, plugins::{NpcPlugin, PlayerPlugin}, systems::fps_display_update};
 
 fn window_conf() -> Conf {
     Conf {
@@ -52,7 +52,7 @@ pub fn setup_system(ctx: &mut Context) {
     ));
 
     // Player
-    ctx.world.spawn((
+    let player = ctx.world.spawn((
         Transform {
             position: map_center,
             ..Default::default()
@@ -61,11 +61,26 @@ pub fn setup_system(ctx: &mut Context) {
         Speed(100.0),
         DirectionComponent(Direction::Down),
         StateComponent(State::Idle),
-        AnimationComponent("player_base_idle_down".to_string()),
         PlayerTag,
         CameraTarget,
         RigidBody::new(BodyType::Dynamic),
         Collider::new_box(16.0, 20.0)
+    ));
+
+    ctx.world.spawn((
+        Transform::default(),
+        AnimationPrefix("player_base".to_string()),
+        AnimationComponent("player_base_idle_down".to_string()),
+        Parent(player),
+        LocalOffset(Vec2::ZERO)
+    ));
+
+    ctx.world.spawn((
+        Transform::default(),
+        AnimationPrefix("player_hand".to_string()),
+        AnimationComponent("player_hand_idle_down".to_string()),
+        Parent(player),
+        LocalOffset(Vec2::ZERO)
     ));
 
     // Farmer Npc
@@ -95,6 +110,7 @@ async fn main() {
 
     app
         .add_plugin(Default2dPlugin)
+        .add_plugin(DebugPlugin)
         .add_plugin(PlayerPlugin)
         .add_plugin(NpcPlugin)
         .add_system(Stage::StartUp, setup_system)

@@ -1,8 +1,9 @@
+use hecs::Entity;
 use macroquad::prelude::*;
 use engine::{gui::components::TextDisplay, prelude::*};
 use ::rand::{seq::IteratorRandom, thread_rng, Rng};
 
-use crate::components::{Behavior, BehaviorComponent, FpsDisplay, NpcTag, PlayerTag};
+use crate::components::{AnimationPrefix, Behavior, BehaviorComponent, FpsDisplay, NpcTag, PlayerTag};
 
 pub fn npc_behavior_system(ctx: &mut Context) {
     for (_, (transform, npc, behavior, state, direction, speed, animation_comp)) in ctx.world.query::<(&mut Transform, &mut NpcTag, &BehaviorComponent, &mut StateComponent, &mut DirectionComponent, &Speed, &mut AnimationComponent)>().iter() {
@@ -46,23 +47,32 @@ pub fn npc_behavior_system(ctx: &mut Context) {
 }
 
 pub fn player_update(ctx: &mut Context) {
-    for (_, (velocity, state, direction, animation_comp)) in ctx.world.query::<(&mut Velocity, &mut StateComponent, &mut DirectionComponent, &mut AnimationComponent)>().with::<&PlayerTag>().iter() {
-        velocity.0 = Vec2::ZERO; // Réinitialiser à chaque frame
+    let player_entities: Vec<Entity> = ctx.world.query::<&PlayerTag>()
+        .iter()
+        .map(|(entity, _)| entity)
+        .collect();
+
+    for entity in player_entities {
+        let (velocity, state, direction) = 
+            if let Ok(data) = ctx.world.query_one_mut::<(&mut Velocity, &mut StateComponent, &mut DirectionComponent)>(entity) {
+                data
+            } else {
+                continue;
+            };
+
+        velocity.0 = Vec2::ZERO;
         let mut moving = false;
         
-        // 1. Définir la vélocité et la direction
         if is_key_down(KeyCode::Right) || is_key_down(KeyCode::D) { 
             velocity.0.x = 1.0; 
             direction.0 = Direction::Right;
             moving = true;
         }
-
         if is_key_down(KeyCode::Left) || is_key_down(KeyCode::Q) { 
             velocity.0.x = -1.0; 
             direction.0 = Direction::Left;
             moving = true;
         }
-
         if is_key_down(KeyCode::Up) || is_key_down(KeyCode::Z) { 
             velocity.0.y = -1.0; 
             if !is_key_down(KeyCode::Right) && !is_key_down(KeyCode::Left) {
@@ -70,7 +80,6 @@ pub fn player_update(ctx: &mut Context) {
             }
             moving = true;
         }
-
         if is_key_down(KeyCode::Down) || is_key_down(KeyCode::S) { 
             velocity.0.y = 1.0; 
             if !is_key_down(KeyCode::Right) && !is_key_down(KeyCode::Left) {
@@ -79,9 +88,18 @@ pub fn player_update(ctx: &mut Context) {
             moving = true;
         }
         
-        // 2. Mettre à jour l'état
         state.0 = if moving { State::Walk } else { State::Idle };
-        animation_comp.0 = format!("player_base_{}_{}", state.0.to_str(), direction.0.to_str());
+
+        let current_state = state.0;
+        let current_direction = direction.0;
+
+        let children = find_children(&ctx.world, entity);
+
+        for child in children {
+            if let Ok((animation_prefix, animation_comp)) = ctx.world.query_one_mut::<(&AnimationPrefix, &mut AnimationComponent)>(child) {
+                animation_comp.0 = format!("{}_{}_{}", animation_prefix.0, current_state.to_str(), current_direction.to_str());
+            }
+        }
     }
 }
 

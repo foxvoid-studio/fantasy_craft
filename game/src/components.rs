@@ -14,6 +14,9 @@ pub struct BehaviorComponent(pub Behavior);
 pub struct PlayerTag;
 
 #[derive(Debug)]
+pub struct AnimationPrefix(pub String);
+
+#[derive(Debug)]
 pub struct NpcTag {
     pub name: String,
     pub wander_time: f32,

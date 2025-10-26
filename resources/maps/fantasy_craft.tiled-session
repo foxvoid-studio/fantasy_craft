@@ -3,16 +3,17 @@
         "height": 4300,
         "width": 2
     },
-    "activeFile": "",
+    "activeFile": "tests.json",
     "expandedProjectPaths": [
+        "."
     ],
     "fileStates": {
         "tests.json": {
             "scale": 0.087158203125,
             "selectedLayer": 0,
             "viewCenter": {
-                "x": 2047.9999999999998,
-                "y": 2042.2633053221293
+                "x": 3551.01400560224,
+                "y": 3522.330532212885
             }
         },
         "tests.json#grass_middle": {
@@ -31,6 +32,7 @@
     "map.tileWidth": 16,
     "map.width": 256,
     "openFiles": [
+        "tests.json"
     ],
     "project": "fantasy_craft.tiled-project",
     "recentFiles": [

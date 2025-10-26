@@ -94,13 +94,9 @@ async fn main() {
     let mut app = App::new(window_conf());
 
     app
-        .add_plugin(PhysicsPlugin)
-        .add_plugin(Camera2dPlugin)
-        .add_plugin(TiledMapPlugin)
-        .add_plugin(AnimationPlugin)
+        .add_plugin(Default2dPlugin)
         .add_plugin(PlayerPlugin)
         .add_plugin(NpcPlugin)
-        .add_plugin(GuiPlugin)
         .add_system(Stage::StartUp, setup_system)
         .add_system(Stage::Update, fps_display_update);
 

@@ -1,4 +1,5 @@
 pub use crate::core::asset_server::*;
+pub use crate::core::plugins::*;
 pub use crate::camera::camera2d::components::*;
 pub use crate::camera::camera2d::systems::*;
 pub use crate::camera::camera2d::plugins::*;

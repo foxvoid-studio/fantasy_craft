@@ -114,3 +114,23 @@ pub fn fps_display_update(ctx: &mut Context) {
         }
     }
 }
+
+pub fn check_player_npc_collision(ctx: &mut Context) {
+    for event in ctx.collision_events.iter() {
+        let e_a = event.entity_a;
+        let e_b = event.entity_b;
+
+        let a_is_player = ctx.world.get::<&PlayerTag>(e_a).is_ok();
+        let b_is_player = ctx.world.get::<&PlayerTag>(e_b).is_ok();
+
+        let a_is_npc = ctx.world.get::<&NpcTag>(e_a).is_ok();
+        let b_is_npc = ctx.world.get::<&NpcTag>(e_b).is_ok();
+
+        if a_is_player && b_is_npc {
+            println!("💥 Collision détectée ! Joueur ({:?}) a touché PNJ ({:?})", e_a, e_b);
+        }
+        else if b_is_player && a_is_npc {
+            println!("💥 Collision détectée ! PNJ ({:?}) a touché Joueur ({:?})", e_a, e_b);
+        }
+    }
+}

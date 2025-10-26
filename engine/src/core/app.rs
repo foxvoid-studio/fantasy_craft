@@ -20,7 +20,8 @@ impl App {
             context: Context {
                 world,
                 asset_server,
-                dt: 0.0
+                dt: 0.0,
+                collision_events: Vec::new()
             },
             schedule: Schedule::new(),
             window_conf: conf
@@ -58,6 +59,8 @@ impl App {
             set_default_camera();
 
             self.schedule.run_stage(Stage::GuiRender, &mut self.context);
+
+            self.context.collision_events.clear();
 
             next_frame().await
         }

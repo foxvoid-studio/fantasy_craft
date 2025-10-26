@@ -6,6 +6,7 @@ use crate::physics::components::Transform;
 use crate::core::context::Context;
 use crate::physics::components::{BodyType, Collider, RigidBody, Velocity, Speed};
 use crate::physics::helpers::make_isometry;
+use crate::prelude::CollisionEvent;
 
 pub fn movement_system(ctx: &mut Context) {
     for (_, (transform, velocity, speed)) in ctx.world.query::<(&mut Transform, &mut Velocity, &Speed)>().iter() {
@@ -73,7 +74,13 @@ pub fn physics_system(ctx: &mut Context) {
                     // Push B by 50% (in the opposite direction)
                     entities[j].1 -= vec2(half_correction.x, half_correction.y);
                 }
+
                 // TODO: Dynamic vs Kinematic and Static vs Static
+
+                ctx.collision_events.push(CollisionEvent {
+                    entity_a: entities[i].0,
+                    entity_b: entities[j].0
+                });
             }
         }
     }

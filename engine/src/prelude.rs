@@ -11,6 +11,7 @@ pub use crate::physics::components::*;
 pub use crate::physics::helpers::*;
 pub use crate::physics::systems::*;
 pub use crate::physics::plugins::*;
+pub use crate::physics::event::*;
 pub use crate::graphics::animations::*;
 pub use crate::graphics::sprites::*;
 pub use crate::graphics::tiled_map::*;

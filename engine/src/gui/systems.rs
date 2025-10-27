@@ -2,7 +2,7 @@ use macroquad::prelude::*;
 use crate::core::context::Context;
 use crate::gui::components::{TextDisplay, GuiBox};
 use crate::physics::components::Transform;
-use crate::prelude::{ButtonState, GuiButton, GuiDraggable};
+use crate::prelude::{ButtonState, GuiButton, GuiCheckbox, GuiDraggable, GuiSlider};
 
 pub fn button_interaction_system(ctx: &mut Context) {
     let (mouse_x, mouse_y) = mouse_position();
@@ -146,6 +146,85 @@ pub fn draggable_system(ctx: &mut Context) {
             if is_hovered && is_pressed { // On commence sur le clic initial
                 draggable.is_dragging = true;
             }
+        }
+    }
+}
+
+pub fn slider_interaction_system(ctx: &mut Context) {
+    let (mouse_x, mouse_y) = mouse_position();
+    let is_pressed = is_mouse_button_pressed(MouseButton::Left);
+    let is_down = is_mouse_button_down(MouseButton::Left);
+
+    let mut query = ctx.world.query::<(&mut GuiSlider, &Transform, &GuiBox)>();
+
+    for (_, (slider, transform, gui_box)) in query.iter() {
+        let x = transform.position.x;
+        let y = transform.position.y;
+        let w = gui_box.width;
+        let h = gui_box.height;
+        
+        let is_hovered = mouse_x >= x && mouse_x <= (x + w) && mouse_y >= y && mouse_y <= (y + h);
+
+        if slider.is_dragging_handle {
+            if !is_down {
+                slider.is_dragging_handle = false;
+            } else {
+                // On continue de glisser, on met à jour la valeur
+                let relative_x = mouse_x - x;
+                let normalized_value = (relative_x / w).clamp(0.0, 1.0);
+                slider.value = slider.min + normalized_value * (slider.max - slider.min);
+            }
+        } else if is_hovered && is_pressed {
+            // On commence à glisser (et on met à jour la valeur immédiatement)
+            slider.is_dragging_handle = true;
+            let relative_x = mouse_x - x;
+            let normalized_value = (relative_x / w).clamp(0.0, 1.0);
+            slider.value = slider.min + normalized_value * (slider.max - slider.min);
+        }
+    }
+}
+
+pub fn slider_render_system(ctx: &mut Context) {
+    let mut query = ctx.world.query::<(&GuiSlider, &Transform, &GuiBox)>();
+
+    for (_, (slider, transform, gui_box)) in query.iter() {
+        let normalized_value = (slider.value - slider.min) / (slider.max - slider.min).max(f32::EPSILON);
+        let handle_width = slider.handle_width;
+        let handle_x = transform.position.x + (normalized_value * gui_box.width) - (handle_width / 2.0);
+
+        draw_rectangle(
+            handle_x.clamp(transform.position.x, transform.position.x + gui_box.width - handle_width),
+            transform.position.y,
+            handle_width,
+            gui_box.height,
+            slider.handle_color
+        )
+    }
+}
+
+pub fn checkbox_logic_system(ctx: &mut Context) {
+    let mut query = ctx.world.query::<(&GuiButton, &mut GuiCheckbox)>();
+
+    for (_, (button, checkbox)) in query.iter() {
+        if button.just_clicked {
+            checkbox.is_checked = !checkbox.is_checked;
+        }
+    }
+}
+
+pub fn checkbox_render_system(ctx: &mut Context) {
+    let mut query = ctx.world.query::<(&GuiCheckbox, &Transform, &GuiBox)>();
+
+    for (_, (checkbox, transform, gui_box)) in query.iter() {
+        if checkbox.is_checked {
+            let x = transform.position.x;
+            let y = transform.position.y;
+            let w = gui_box.width;
+            let h = gui_box.height;
+
+            let padding = w * 0.2;
+            draw_line(x + padding, y + padding, x + w - padding, y + h - padding, 2.0, BLACK);
+            draw_line(x + w - padding, y + padding, x + padding, y + h - padding, 2.0, BLACK);
         }
     }
 }

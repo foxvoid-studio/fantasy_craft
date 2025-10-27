@@ -80,3 +80,32 @@ impl Default for GuiDraggable {
         }
     }
 }
+
+#[derive(Debug, Clone, Copy)]
+pub struct GuiSlider {
+    pub value: f32,
+    pub min: f32,
+    pub max: f32,
+    pub is_dragging_handle: bool,
+    pub handle_color: Color,
+    pub handle_width: f32
+}
+
+impl Default for GuiSlider {
+    fn default() -> Self {
+        Self {
+            value: 0.0,
+            min: 0.0,
+            max: 1.0,
+            is_dragging_handle: false,
+            handle_color: DARKGRAY,
+            handle_width: 10.0
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Default)]
+pub struct GuiCheckbox {
+    pub is_checked: bool
+}
+

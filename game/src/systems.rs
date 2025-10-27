@@ -45,19 +45,19 @@ pub fn setup_ui(ctx: &mut Context) {
         LocalOffset(vec2(5.0, 20.0))
     ));
 
-    ctx.world.spawn((
-        Transform {
+    ctx.world.spawn(SliderBundle {
+        transform: Transform {
             position: vec2(150.0, 300.0),
             ..Default::default()
         },
-        GuiBox {
+        gui_box: GuiBox {
             width: 200.0,
             height: 20.0,
             color: Color::new(0.3, 0.3, 0.3, 1.0),
             border_radius: 10.0,
             ..Default::default()
         },
-        GuiSlider {
+        slider: GuiSlider {
             value: 0.5,
             min: 0.0,
             max: 1.0,
@@ -65,30 +65,16 @@ pub fn setup_ui(ctx: &mut Context) {
             handle_color: LIGHTGRAY,
             handle_width: 10.0
         }
-    ));
+    });
 
-    ctx.world.spawn((
-        Transform {
+    // Checkbox
+    ctx.world.spawn(CheckboxBundle {
+        transform: Transform {
             position: vec2(150.0, 350.0),
             ..Default::default()
         },
-        GuiBox {
-            width: 25.0,
-            height: 25.0,
-            color: Color::new(0.9, 0.9, 0.9, 1.0),
-            border_radius: 4.0,
-            ..Default::default()
-        },
-        GuiButton {
-            normal_color: Color::new(0.9, 0.9, 0.9, 1.0),
-            hovered_color: Color::new(1.0, 1.0, 1.0, 1.0),
-            pressed_color: Color::new(0.8, 0.8, 0.8, 1.0),
-            ..Default::default()
-        },
-        GuiCheckbox {
-            is_checked: false
-        }
-    ));
+        ..Default::default()
+    });
 
     let button = ctx.world.spawn((
         Transform {

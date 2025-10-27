@@ -24,4 +24,5 @@ pub use crate::graphics::tiled_map::tiled_map::*;
 pub use crate::gui::plugins::*;
 pub use crate::gui::systems::*;
 pub use crate::gui::components::*;
+pub use crate::gui::bundles::*;
 pub use crate::hierarchy::components::*;

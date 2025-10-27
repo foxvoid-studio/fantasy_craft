@@ -67,3 +67,16 @@ impl Default for GuiButton {
         }
     }
 }
+
+#[derive(Debug, Clone, Copy)]
+pub struct GuiDraggable {
+    pub is_dragging: bool
+}
+
+impl Default for GuiDraggable {
+    fn default() -> Self {
+        Self {
+            is_dragging: false
+        }
+    }
+}

@@ -21,7 +21,8 @@ impl App {
                 world,
                 asset_server,
                 dt: 0.0,
-                collision_events: Vec::new()
+                collision_events: Vec::new(),
+                prev_mouse_pos: Vec2::ZERO
             },
             schedule: Schedule::new(),
             window_conf: conf
@@ -61,6 +62,7 @@ impl App {
             self.schedule.run_stage(Stage::GuiRender, &mut self.context);
 
             self.context.collision_events.clear();
+            self.context.prev_mouse_pos = mouse_position().into();
 
             next_frame().await
         }

@@ -4,9 +4,46 @@ use engine::{gui::components::TextDisplay, prelude::*};
 use ::rand::{seq::IteratorRandom, thread_rng, Rng};
 use crate::components::{AnimationPrefix, Behavior, BehaviorComponent, ClickMeAction, FpsDisplay, NpcTag, PlayerTag};
 
-pub fn setup_system(ctx: &mut Context) {
-    let map = ctx.asset_server.get_map("test_map").unwrap();
-    let map_center = Vec2::new((map.width as f32 * map.tile_width as f32) / 2.0, (map.height as f32 * map.tile_height as f32) / 2.0);
+pub fn setup_ui(ctx: &mut Context) {
+    let debug_panel = ctx.world.spawn((
+        Transform {
+            position: vec2(10.0, 10.0),
+            ..Default::default()
+        },
+        GuiBox {
+            width: 140.0,
+            height: 80.0,
+            color: Color::new(0.5, 0.5, 0.5, 1.0),
+            border_radius: 10.0,
+            ..Default::default()
+        },
+        GuiDraggable {
+            is_dragging: false
+        }
+    ));
+
+    ctx.world.spawn((
+        Transform::default(),
+        TextDisplay {
+            text: "Debug Menu".to_string(),
+            color: Color::new(1.0, 1.0, 1.0, 1.0),
+            ..Default::default()
+        },
+        Parent(debug_panel),
+        LocalOffset(vec2(5.0, -5.0))
+    ));
+
+    ctx.world.spawn((
+        Transform::default(),
+        FpsDisplay { fps_timer: 0.0, displayed_fps: get_fps() },
+        TextDisplay {
+            text: "FPS: 60".to_string(),
+            color: Color::new(1.0, 1.0, 1.0, 1.0),
+            ..Default::default()
+        },
+        Parent(debug_panel),
+        LocalOffset(vec2(5.0, 20.0))
+    ));
 
     let button = ctx.world.spawn((
         Transform {
@@ -39,32 +76,11 @@ pub fn setup_system(ctx: &mut Context) {
         },
         Parent(button)
     ));
+}
 
-    let fps_text_box = ctx.world.spawn((
-        Transform {
-            position: vec2(10.0, 10.0),
-            ..Default::default()
-        },
-        GuiBox {
-            width: 120.0,
-            height: 30.0,
-            color: Color::new(0.0, 0.0, 0.0, 1.0),
-            screen_space: true,
-            border_radius: 5.0
-        }
-    ));
-    
-    ctx.world.spawn((
-        Transform::default(),
-        FpsDisplay { fps_timer: 0.0, displayed_fps: get_fps() },
-        TextDisplay {
-            text: "FPS: 60".to_string(),
-            color: Color::new(1.0, 1.0, 1.0, 1.0),
-            ..Default::default()
-        },
-        Parent(fps_text_box),
-        LocalOffset(vec2(5.0, -5.0))
-    ));
+pub fn setup_system(ctx: &mut Context) {
+    let map = ctx.asset_server.get_map("test_map").unwrap();
+    let map_center = Vec2::new((map.width as f32 * map.tile_width as f32) / 2.0, (map.height as f32 * map.tile_height as f32) / 2.0);
 
     ctx.world.spawn((
         Transform {

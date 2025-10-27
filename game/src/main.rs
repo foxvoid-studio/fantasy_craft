@@ -6,7 +6,7 @@ mod systems;
 mod plugins;
 
 use crate::plugins::{NpcPlugin, PlayerPlugin};
-use crate::systems::{setup_system, fps_display_update, click_me_system};
+use crate::systems::{click_me_system, fps_display_update, setup_system, setup_ui};
 
 fn window_conf() -> Conf {
     Conf {
@@ -26,6 +26,7 @@ async fn main() {
         .add_plugin(DebugPlugin)
         .add_plugin(PlayerPlugin)
         .add_plugin(NpcPlugin)
+        .add_system(Stage::StartUp, setup_ui)
         .add_system(Stage::StartUp, setup_system)
         .add_system(Stage::Update, fps_display_update)
         .add_system(Stage::Update, click_me_system);

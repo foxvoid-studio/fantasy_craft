@@ -9,18 +9,18 @@
     ],
     "fileStates": {
         "tests.json": {
-            "scale": 0.087158203125,
-            "selectedLayer": 0,
+            "scale": 0.125,
+            "selectedLayer": 1,
             "viewCenter": {
-                "x": 3551.01400560224,
-                "y": 3522.330532212885
+                "x": -292,
+                "y": 2016
             }
         },
         "tests.json#grass_middle": {
             "scaleInDock": 1
         },
         "tests.json#grass_tiles": {
-            "scaleInDock": 1
+            "scaleInDock": 3
         }
     },
     "last.exportedFilePath": "/home/ikigami/Documents/Projets/fantasy_craft/resources/maps",

@@ -2,7 +2,7 @@ use macroquad::prelude::*;
 use crate::core::context::Context;
 use crate::gui::components::{TextDisplay, GuiBox};
 use crate::physics::components::Transform;
-use crate::prelude::{ButtonState, GuiButton};
+use crate::prelude::{ButtonState, GuiButton, GuiDraggable};
 
 pub fn button_interaction_system(ctx: &mut Context) {
     let (mouse_x, mouse_y) = mouse_position();
@@ -109,6 +109,43 @@ pub fn text_render_system(ctx: &mut Context) {
                 text_display.font_size,
                 text_display.color
             );
+        }
+    }
+}
+
+pub fn draggable_system(ctx: &mut Context) {
+    let (mouse_x, mouse_y) = mouse_position();
+
+    let current_mouse_pos = vec2(mouse_x, mouse_y);
+    let delta = current_mouse_pos - ctx.prev_mouse_pos;
+    
+    let is_pressed = is_mouse_button_pressed(MouseButton::Left); // Pour commencer le drag
+    let is_down = is_mouse_button_down(MouseButton::Left);     // Pour maintenir/arrêter le drag
+
+    let mut query = ctx.world.query::<(&mut GuiDraggable, &mut Transform, &GuiBox)>();
+
+    for (_, (draggable, transform, gui_box)) in query.iter() {
+        if draggable.is_dragging {
+            // Si on est en train de glisser
+            if !is_down { // On vérifie si le bouton est RELÂCHÉ (n'est plus enfoncé)
+                draggable.is_dragging = false;
+            } else {
+                // Le bouton est toujours enfoncé, on continue de bouger
+                transform.position.x += delta.x;
+                transform.position.y += delta.y;
+            }
+        } else {
+            // On ne glisse pas, on vérifie si on doit commencer
+            let x = transform.position.x;
+            let y = transform.position.y;
+            let w = gui_box.width;
+            let h = gui_box.height;
+
+            let is_hovered = mouse_x >= x && mouse_x <= (x + w) && mouse_y >= y && mouse_y <= (y + h);
+
+            if is_hovered && is_pressed { // On commence sur le clic initial
+                draggable.is_dragging = true;
+            }
         }
     }
 }

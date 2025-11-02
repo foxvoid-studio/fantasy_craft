@@ -12,8 +12,8 @@
             "scale": 0.125,
             "selectedLayer": 1,
             "viewCenter": {
-                "x": -292,
-                "y": 2016
+                "x": 2048,
+                "y": 2040
             }
         },
         "tests.json#grass_middle": {

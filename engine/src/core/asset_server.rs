@@ -48,7 +48,8 @@ pub struct AssetServer {
     animations: HashMap<String, Animation>,
     spritesheets: HashMap<String, Arc<Spritesheet>>,
     maps: HashMap<String, TileMap>,
-    rendered_maps: HashMap<String, RenderedTileMap>
+    rendered_maps: HashMap<String, RenderedTileMap>,
+    rendered_layers: HashMap<String, HashMap<String, RenderTarget>>
 }
 
 #[allow(dead_code)]
@@ -58,7 +59,8 @@ impl AssetServer {
             animations: HashMap::new(),
             spritesheets: HashMap::new(),
             maps: HashMap::new(),
-            rendered_maps: HashMap::new()
+            rendered_maps: HashMap::new(),
+            rendered_layers: HashMap::new()
         }
     }
 
@@ -89,6 +91,10 @@ impl AssetServer {
 
     pub fn get_renderer_map(&self, id: &str) -> Option<&RenderedTileMap> {
         self.rendered_maps.get(id)
+    }
+
+    pub fn get_renderer_layer(&self, map_id: &str, layer_name: &str) -> Option<&RenderTarget> {
+        self.rendered_layers.get(map_id).and_then(|layers| layers.get(layer_name))
     }
 
     pub async fn load_tiled_map(&mut self, id: String, path: &str) -> Result<(), Box<dyn std::error::Error>> {
@@ -158,6 +164,8 @@ impl AssetServer {
 
         let rendered_map = tile_map.to_render_tilemap();
         self.rendered_maps.insert(id.clone(), rendered_map);
+
+        self.rendered_layers.insert(id.clone(), tile_map.render_all_layers());
 
         self.maps.insert(id, tile_map);
 

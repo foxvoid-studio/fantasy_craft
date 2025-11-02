@@ -126,8 +126,9 @@ pub fn setup_system(ctx: &mut Context) {
     ));
 
     ctx.world.spawn((
-        TileMapComponent{
-            name: "test_map".to_string()
+        TileMapLayerComponent{
+            tilemap_name: "test_map".to_string(),
+            layer_name: "background".to_string()
         },
         MainTileMap
     ));

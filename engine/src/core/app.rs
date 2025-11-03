@@ -1,6 +1,7 @@
 use hecs::World;
 use macroquad::prelude::*;
 use crate::core::context::Context;
+use crate::core::focus::InputFocus;
 use crate::core::schedule::{Schedule, Stage, System};
 use crate::core::asset_server::AssetServer;
 use crate::core::plugins::Plugin;
@@ -22,7 +23,8 @@ impl App {
                 asset_server,
                 dt: 0.0,
                 collision_events: Vec::new(),
-                prev_mouse_pos: Vec2::ZERO
+                prev_mouse_pos: Vec2::ZERO,
+                input_focus: InputFocus::default()
             },
             schedule: Schedule::new(),
             window_conf: conf

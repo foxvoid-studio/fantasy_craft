@@ -127,6 +127,7 @@ pub fn setup_ui(ctx: &mut Context) {
             text: "".to_string(),
             font_size: 28.0,
             color: BLACK,
+            padding: vec2(15.0, -2.0),
             ..Default::default()
         }
     ));
@@ -251,6 +252,8 @@ pub fn npc_behavior_system(ctx: &mut Context) {
 }
 
 pub fn player_update(ctx: &mut Context) {
+    let input_is_captured = ctx.input_focus.is_captured_by_ui;
+
     let player_entities: Vec<Entity> = ctx.world.query::<&PlayerTag>()
         .iter()
         .map(|(entity, _)| entity)
@@ -267,29 +270,31 @@ pub fn player_update(ctx: &mut Context) {
         velocity.0 = Vec2::ZERO;
         let mut moving = false;
         
-        if is_key_down(KeyCode::Right) || is_key_down(KeyCode::D) { 
-            velocity.0.x = 1.0; 
-            direction.0 = Direction::Right;
-            moving = true;
-        }
-        if is_key_down(KeyCode::Left) || is_key_down(KeyCode::Q) { 
-            velocity.0.x = -1.0; 
-            direction.0 = Direction::Left;
-            moving = true;
-        }
-        if is_key_down(KeyCode::Up) || is_key_down(KeyCode::Z) { 
-            velocity.0.y = -1.0; 
-            if !is_key_down(KeyCode::Right) && !is_key_down(KeyCode::Left) {
-                direction.0 = Direction::Up;
+        if !input_is_captured {
+            if is_key_down(KeyCode::Right) || is_key_down(KeyCode::D) { 
+                velocity.0.x = 1.0; 
+                direction.0 = Direction::Right;
+                moving = true;
             }
-            moving = true;
-        }
-        if is_key_down(KeyCode::Down) || is_key_down(KeyCode::S) { 
-            velocity.0.y = 1.0; 
-            if !is_key_down(KeyCode::Right) && !is_key_down(KeyCode::Left) {
-                direction.0 = Direction::Down;
+            if is_key_down(KeyCode::Left) || is_key_down(KeyCode::Q) { 
+                velocity.0.x = -1.0; 
+                direction.0 = Direction::Left;
+                moving = true;
             }
-            moving = true;
+            if is_key_down(KeyCode::Up) || is_key_down(KeyCode::Z) { 
+                velocity.0.y = -1.0; 
+                if !is_key_down(KeyCode::Right) && !is_key_down(KeyCode::Left) {
+                    direction.0 = Direction::Up;
+                }
+                moving = true;
+            }
+            if is_key_down(KeyCode::Down) || is_key_down(KeyCode::S) { 
+                velocity.0.y = 1.0; 
+                if !is_key_down(KeyCode::Right) && !is_key_down(KeyCode::Left) {
+                    direction.0 = Direction::Down;
+                }
+                moving = true;
+            }
         }
         
         state.0 = if moving { State::Walk } else { State::Idle };

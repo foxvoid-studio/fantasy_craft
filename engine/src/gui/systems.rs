@@ -316,6 +316,10 @@ pub fn input_field_focus_system(ctx: &mut Context) {
     let mut query = ctx.world.query::<&mut GuiInputField>();
     for (e, input_field) in query.iter() {
         if Some(e) == clicked_entity {
+            if !input_field.is_focused {
+                while get_char_pressed().is_some() {}
+            }
+
             input_field.is_focused = true;
             input_field.caret_visible = true;
             input_field.caret_blink_timer = 0.0;
@@ -393,10 +397,9 @@ pub fn input_field_render_system(ctx: &mut Context) {
             continue;
         }
 
-        let padding = 5.0;
-        let text_x = transform.position.x + padding;
+        let text_x = transform.position.x + input_field.padding.x;
 
-        let text_y_top = transform.position.y + (gui_box.height / 2.0) - (input_field.font_size / 2.0);
+        let text_y_top = transform.position.y + (gui_box.height / 2.0) - (input_field.font_size / 2.0) + input_field.padding.y;
     
         let baseline_y = text_y_top + input_field.font_size;
 
@@ -421,6 +424,17 @@ pub fn input_field_render_system(ctx: &mut Context) {
                 input_field.font_size,
                 input_field.color
             );
+        }
+    }
+}
+
+pub fn input_focus_update_system(ctx: &mut Context) {
+    ctx.input_focus.is_captured_by_ui = false;
+
+    for (_, input_field) in ctx.world.query::<&GuiInputField>().iter() {
+        if input_field.is_focused {
+            ctx.input_focus.is_captured_by_ui = true;
+            break;
         }
     }
 }

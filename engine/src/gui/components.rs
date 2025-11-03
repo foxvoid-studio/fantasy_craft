@@ -118,7 +118,8 @@ pub struct GuiInputField {
     pub max_chars: Option<usize>,
     pub font_size: f32,
     pub color: Color,
-    pub backspace_repeat_timer: f32
+    pub backspace_repeat_timer: f32,
+    pub padding: Vec2
 }
 
 impl Default for GuiInputField {
@@ -131,7 +132,8 @@ impl Default for GuiInputField {
             max_chars: None,
             font_size: 30.0,
             color: BLACK,
-            backspace_repeat_timer: 0.0
+            backspace_repeat_timer: 0.0,
+            padding: vec2(0.0, 0.0)
         }
     }
 }

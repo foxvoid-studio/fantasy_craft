@@ -51,7 +51,7 @@ impl TileMap {
         }
     }
 
-    pub fn to_render_tilemap(&self) -> RenderedTileMap {
+    pub async fn to_render_tilemap(&self) -> RenderedTileMap {
         let tile_w = self.tile_width as f32;
         let tile_h = self.tile_height as f32;
 
@@ -86,6 +86,8 @@ impl TileMap {
 
         set_default_camera();
 
+        next_frame().await;
+
         RenderedTileMap {
             texture: render_target,
             width,
@@ -93,7 +95,7 @@ impl TileMap {
         }
     }
 
-    pub fn render_all_layers(&self) -> HashMap<String, RenderTarget> {
+    pub async fn render_all_layers(&self) -> HashMap<String, RenderTarget> { // <-- Rendre async
         let mut renderer_layers = HashMap::new();
 
         let tile_w = self.tile_width as f32;
@@ -127,9 +129,18 @@ impl TileMap {
                     }
                 }
             }
-
+            
+            // N'attendez pas ici ! On insère d'abord
             renderer_layers.insert(layer_name.clone(), render_target);
         }
+
+        // --- CORRECTION ---
+        // Une fois que TOUTES les commandes de dessin pour TOUS les layers 
+        // sont en file d'attente, on réinitialise la caméra...
+        set_default_camera();
+        
+        // ...et on attend UNE seule frame pour que le GPU exécute tout.
+        next_frame().await; 
 
         renderer_layers
     }

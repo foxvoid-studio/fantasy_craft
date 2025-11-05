@@ -97,12 +97,17 @@ impl AssetServer {
         self.rendered_layers.get(map_id).and_then(|layers| layers.get(layer_name))
     }
 
+    pub fn merge(&mut self, other: AssetServer) {
+        self.animations.extend(other.animations);
+        self.spritesheets.extend(other.spritesheets);
+        self.maps.extend(other.maps);
+    }
+
     pub async fn load_tiled_map(&mut self, id: String, path: &str) -> Result<(), Box<dyn std::error::Error>> {
         let json_content = std::fs::read_to_string(path)?;
         let map_data: TiledMapData = serde_json::from_str(&json_content)?;
 
         let map_path = Path::new(path);
-
         let map_dir = map_path.parent().unwrap_or(Path::new(""));
 
         let mut tilesets = Vec::new();
@@ -110,34 +115,25 @@ impl AssetServer {
 
         for ts_data in &map_data.tilesets {
             let relative_image_path = Path::new(&ts_data.image); 
-
             let absolute_image_path: PathBuf = map_dir.join(relative_image_path);
-            
-            let tileset_path = absolute_image_path.to_str()
-                .ok_or_else(|| "Failed to convert path to string")?
-                .to_string();
+            let tileset_path = absolute_image_path.to_str().unwrap().to_string();
 
             if !self.spritesheets.contains_key(&tileset_path) {
                 let texture = load_texture(&tileset_path).await?;
                 texture.set_filter(FilterMode::Nearest);
-                
-                let tile_w = ts_data.tilewidth as f32; // On utilise la dimension du Tileset
-                let tile_h = ts_data.tileheight as f32;
 
+                let tile_w = ts_data.tilewidth as f32;
+                let tile_h = ts_data.tileheight as f32;
                 let spritesheet = Spritesheet::new(texture, tile_w, tile_h);
                 self.add_spritesheet(tileset_path.clone(), spritesheet);
             }
 
-            let spritesheet_arc = self.spritesheets.get(&tileset_path)
-                .ok_or_else(|| format!("Spritesheet for Tiled Tileset '{}' not found", tileset_path))?
-                .clone();
-
-            let columns = ts_data.columns;
+            let spritesheet_arc = self.spritesheets.get(&tileset_path).unwrap().clone();
 
             tilesets.push(Tileset {
                 first_gid: ts_data.firstgid,
                 spritesheet: spritesheet_arc,
-                columns,
+                columns: ts_data.columns,
                 tile_width: map_data.tilewidth as f32,
                 tile_height: map_data.tileheight as f32
             });
@@ -153,6 +149,7 @@ impl AssetServer {
             }
         }
 
+        // ⚠️ Ne pas créer les RenderTarget ici
         let tile_map = TileMap {
             width: map_data.width,
             height: map_data.height,
@@ -162,16 +159,43 @@ impl AssetServer {
             tilesets,
         };
 
-        let rendered_map = tile_map.to_render_tilemap();
-        self.rendered_maps.insert(id.clone(), rendered_map);
-
-        self.rendered_layers.insert(id.clone(), tile_map.render_all_layers());
-
         self.maps.insert(id, tile_map);
-
         Ok(())
     }
-    
+
+    pub async fn prepare_loaded_tiledmap(&mut self) {
+        for (id, map) in self.maps.iter() {
+            let renderer_map = map.to_render_tilemap().await;
+            self.rendered_maps.insert(id.clone(), renderer_map);
+
+            let layers = map.render_all_layers().await;
+            self.rendered_layers.insert(id.clone(), layers);
+        }
+    }
+
+    pub async fn finalize_textures(&self) {
+        // Draw a single invisible pixel from each texture to ensure GPU upload
+        clear_background(BLACK);
+
+        for spritesheet in self.spritesheets.values() {
+            draw_texture_ex(
+                &spritesheet.texture.clone(),
+                -1000.0, -1000.0, // off-screen
+                WHITE,
+                DrawTextureParams {
+                    dest_size: Some(vec2(1.0, 1.0)),
+                    ..Default::default()
+                },
+            );
+        }
+
+        // Force GPU sync — let Macroquad flush commands
+        next_frame().await;
+
+        // Second frame ensures all textures are uploaded and cached
+        next_frame().await;
+    }
+
     // --- Logique de chargement ---
     pub async fn load_assets_from_file(&mut self, path: &str) -> Result<(), Box<dyn std::error::Error>> {
         let json_content = std::fs::read_to_string(path)?;

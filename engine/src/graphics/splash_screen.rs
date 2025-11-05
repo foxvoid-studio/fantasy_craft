@@ -2,6 +2,11 @@ use macroquad::prelude::*;
 use crate::prelude::{Context, GuiBox, GuiImage, Transform};
 
 #[derive(Debug)]
+pub struct SplashScreenData {
+    pub background_color: Color
+}
+
+#[derive(Debug)]
 pub struct SplashScreenTag;
 
 #[derive(Debug)]
@@ -21,6 +26,13 @@ pub fn setup_splash_screen(ctx: &mut Context) {
     let pos_x = (screen_w / 2.0) - (logo_w / 2.0);
     let pos_y = (screen_h / 2.0) - (logo_h / 2.0);
 
+    let color = if let Some(data) = &ctx.splash_screen_data {
+        data.background_color
+    }
+    else {
+        BLACK
+    };
+    
     ctx.world.spawn((
         Transform {
             position: vec2(pos_x, pos_y),
@@ -29,11 +41,11 @@ pub fn setup_splash_screen(ctx: &mut Context) {
         GuiBox {
             width: logo_w,
             height: logo_h,
-            color: BLACK,
+            color,
             ..Default::default()
         },
         GuiImage {
-            texture: Some("logo_engine".to_string()),
+            texture: Some("splash_screen_logo".to_string()),
             col_row: uvec2(0, 0),
             tint: WHITE,
             ..Default::default()

@@ -6,14 +6,16 @@ use crate::core::focus::InputFocus;
 use crate::core::schedule::{Schedule, Stage, System};
 use crate::core::asset_server::AssetServer;
 use crate::core::plugins::Plugin;
-use crate::graphics::splash_screen::{animate_splash_screen, despawn_splash_screen, setup_splash_screen};
+use crate::graphics::splash_screen::{SplashScreenData, animate_splash_screen, despawn_splash_screen, setup_splash_screen};
 use crate::prelude::Spritesheet;
 
 pub struct App {
     pub context: Context,
     pub schedule: Schedule,
     pub window_conf: Conf,
-    show_splash_screen: bool
+    show_splash_screen: bool,
+    splash_screen_logo: String,
+    splash_screen_background_color: Color
 }
 
 impl App {
@@ -28,16 +30,29 @@ impl App {
                 dt: 0.0,
                 collision_events: Vec::new(),
                 prev_mouse_pos: Vec2::ZERO,
-                input_focus: InputFocus::default()
+                input_focus: InputFocus::default(),
+                splash_screen_data: None
             },
             schedule: Schedule::new(),
             window_conf: conf,
-            show_splash_screen: true
+            show_splash_screen: true,
+            splash_screen_logo: "resources/textures/logo_engine.png".to_string(),
+            splash_screen_background_color: Color::new(1.0, 0.980392157, 0.960784314, 1.0)
         }
     }
 
-    pub fn with_splash_screen(&mut self, enabled: bool) -> &mut Self {
+    pub fn with_splash_screen_enabled(&mut self, enabled: bool) -> &mut Self {
         self.show_splash_screen = enabled;
+        self
+    }
+
+    pub fn with_splash_screen_logo(&mut self, path: &str) -> &mut Self {
+        self.splash_screen_logo = path.to_string();
+        self
+    }
+
+    pub fn with_splash_screen_background_color(&mut self, color: Color) -> &mut Self {
+        self.splash_screen_background_color = color;
         self
     }
 
@@ -59,13 +74,17 @@ impl App {
         if self.show_splash_screen {
             // --- Splash setup ---
             self.context.asset_server.add_spritesheet(
-                "logo_engine".to_string(),
+                "splash_screen_logo".to_string(),
                 Spritesheet::new(
-                    load_texture("resources/textures/logo_engine.png").await.unwrap(),
+                    load_texture(&self.splash_screen_logo).await.unwrap(),
                     1024.0,
                     1024.0,
                 ),
             );
+
+            self.context.splash_screen_data = Some(SplashScreenData {
+                background_color: self.splash_screen_background_color
+            });
 
             setup_splash_screen(&mut self.context);
             let start_time = get_time();
@@ -84,7 +103,7 @@ impl App {
             // --- Boucle du splash ---
             loop {
                 self.context.dt = get_frame_time();
-                clear_background(BLACK);
+                clear_background(self.splash_screen_background_color);
 
                 // Animation + rendu
                 animate_splash_screen(&mut self.context);

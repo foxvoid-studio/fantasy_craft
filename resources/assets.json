@@ -5,6 +5,12 @@
             "path": "resources/maps/tests.json"
         }
     ],
+    "fonts": [
+        {
+            "id": "roboto-regular",
+            "path": "resources/fonts/Roboto/static/Roboto-Regular.ttf"
+        }
+    ],
     "spritesheets": [
         {
             "id": "player_base",

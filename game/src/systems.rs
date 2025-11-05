@@ -28,10 +28,12 @@ pub fn setup_ui(ctx: &mut Context) {
         TextDisplay {
             text: "Debug Menu".to_string(),
             color: Color::new(1.0, 1.0, 1.0, 1.0),
+            font_size: 20.0,
             ..Default::default()
         },
+        FontComponent("roboto-regular".to_string()),
         Parent(debug_panel),
-        LocalOffset(vec2(5.0, -5.0))
+        LocalOffset(vec2(5.0, 0.0))
     ));
 
     ctx.world.spawn((
@@ -40,10 +42,12 @@ pub fn setup_ui(ctx: &mut Context) {
         TextDisplay {
             text: "FPS: 60".to_string(),
             color: Color::new(1.0, 1.0, 1.0, 1.0),
+            font_size: 20.0,
             ..Default::default()
         },
+        FontComponent("roboto-regular".to_string()),
         Parent(debug_panel),
-        LocalOffset(vec2(5.0, 20.0))
+        LocalOffset(vec2(5.0, 25.0))
     ));
 
     ctx.world.spawn(SliderBundle {
@@ -99,13 +103,14 @@ pub fn setup_ui(ctx: &mut Context) {
 
     ctx.world.spawn((
         Transform::default(),
-        LocalOffset(vec2(10.0, -7.0)),
+        LocalOffset(vec2(20.0, 0.0)),
         TextDisplay {
             text: "Click me".to_string(),
-            font_size: 30.0,
+            font_size: 20.0,
             color: Color::new(1.0, 1.0, 1.0, 1.0),
             ..Default::default()
         },
+        FontComponent("roboto-regular".to_string()),
         Parent(button)
     ));
 
@@ -129,7 +134,8 @@ pub fn setup_ui(ctx: &mut Context) {
             color: BLACK,
             padding: vec2(15.0, -2.0),
             ..Default::default()
-        }
+        },
+        FontComponent("roboto-regular".to_string()),
     ));
 }
 

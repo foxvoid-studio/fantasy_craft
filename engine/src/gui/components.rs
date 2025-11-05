@@ -1,5 +1,8 @@
 use macroquad::prelude::*;
 
+#[derive(Debug)]
+pub struct FontComponent(pub String);
+
 #[derive(Debug, Clone)]
 pub struct TextDisplay {
     pub text: String,

@@ -22,7 +22,7 @@ async fn main() {
     let mut app = App::new(window_conf());
 
     app
-        .with_splash_screen_enabled(true)
+        .with_splash_screen_enabled(false)
         .add_plugin(Default2dPlugin)
         .add_plugin(DebugPlugin)
         .add_plugin(PlayerPlugin)

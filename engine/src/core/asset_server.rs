@@ -14,6 +14,12 @@ struct MapData {
 }
 
 #[derive(Deserialize)]
+struct FontData {
+    id: String,
+    path: String
+}
+
+#[derive(Deserialize)]
 struct FrameSequenceData {
     row: u32,
     count: u32,
@@ -39,6 +45,7 @@ struct AnimationData {
 #[derive(Deserialize)]
 struct AssetFileData {
     maps: Vec<MapData>,
+    fonts: Vec<FontData>,
     spritesheets: Vec<SpritesheetData>,
     animations: Vec<AnimationData>,
 }
@@ -49,7 +56,8 @@ pub struct AssetServer {
     spritesheets: HashMap<String, Arc<Spritesheet>>,
     maps: HashMap<String, TileMap>,
     rendered_maps: HashMap<String, RenderedTileMap>,
-    rendered_layers: HashMap<String, HashMap<String, RenderTarget>>
+    rendered_layers: HashMap<String, HashMap<String, RenderTarget>>,
+    fonts: HashMap<String, Font>
 }
 
 #[allow(dead_code)]
@@ -60,7 +68,8 @@ impl AssetServer {
             spritesheets: HashMap::new(),
             maps: HashMap::new(),
             rendered_maps: HashMap::new(),
-            rendered_layers: HashMap::new()
+            rendered_layers: HashMap::new(),
+            fonts: HashMap::new()
         }
     }
 
@@ -89,6 +98,10 @@ impl AssetServer {
         self.maps.get(name)
     }
 
+    pub fn get_font(&self, name: &str) -> Option<&Font> {
+        self.fonts.get(name)
+    }
+
     pub fn get_renderer_map(&self, id: &str) -> Option<&RenderedTileMap> {
         self.rendered_maps.get(id)
     }
@@ -100,6 +113,7 @@ impl AssetServer {
     pub fn merge(&mut self, other: AssetServer) {
         self.animations.extend(other.animations);
         self.spritesheets.extend(other.spritesheets);
+        self.fonts.extend(other.fonts);
         self.maps.extend(other.maps);
     }
 
@@ -149,7 +163,6 @@ impl AssetServer {
             }
         }
 
-        // ⚠️ Ne pas créer les RenderTarget ici
         let tile_map = TileMap {
             width: map_data.width,
             height: map_data.height,
@@ -241,6 +254,12 @@ impl AssetServer {
             );
             
             self.add_animation(anim_data.id, animation);
+        }
+
+        // 3. Chargement des fonts
+        for font_data in asset_data.fonts {
+            let font = load_ttf_font(&font_data.path).await.unwrap();
+            self.fonts.insert(font_data.id.clone(), font);
         }
 
         Ok(())

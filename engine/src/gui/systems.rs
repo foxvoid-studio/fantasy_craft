@@ -3,7 +3,7 @@ use macroquad::prelude::*;
 use crate::core::context::Context;
 use crate::gui::components::{TextDisplay, GuiBox};
 use crate::physics::components::Transform;
-use crate::prelude::{ButtonState, GuiButton, GuiCheckbox, GuiDraggable, GuiImage, GuiInputField, GuiSlider, Visible};
+use crate::prelude::{ButtonState, FontComponent, GuiButton, GuiCheckbox, GuiDraggable, GuiImage, GuiInputField, GuiSlider, Visible};
 
 pub fn button_interaction_system(ctx: &mut Context) {
     let (mouse_x, mouse_y) = mouse_position();
@@ -111,7 +111,7 @@ pub fn gui_box_render_system(ctx: &mut Context) {
 }
 
 pub fn text_render_system(ctx: &mut Context) {
-    for (_, (text_display, transform, visibility)) in ctx.world.query::<(&TextDisplay, &Transform, Option<&Visible>)>().iter() {
+    for (_, (text_display, transform, visibility, font_opt)) in ctx.world.query::<(&TextDisplay, &Transform, Option<&Visible>, Option<&FontComponent>)>().iter() {
         let is_visible = visibility.map_or(true, |v| v.0);
 
         if !is_visible {
@@ -121,13 +121,28 @@ pub fn text_render_system(ctx: &mut Context) {
         if text_display.screen_space {
             let baseline_y = transform.position.y + text_display.font_size;
 
-            draw_text(
-                &text_display.text,
-                transform.position.x,
-                baseline_y,
-                text_display.font_size,
-                text_display.color
-            );
+            if let Some(font) = font_opt {
+                draw_text_ex(
+                    &text_display.text,
+                    transform.position.x,
+                    baseline_y,
+                    TextParams {
+                        font: ctx.asset_server.get_font(&font.0),
+                        font_size: text_display.font_size as u16,
+                        color: text_display.color,
+                        ..Default::default()
+                    }
+                );
+            }
+            else {
+                draw_text(
+                    &text_display.text,
+                    transform.position.x,
+                    baseline_y,
+                    text_display.font_size,
+                    text_display.color
+                );
+            }
         }
     }
 }
@@ -389,9 +404,9 @@ pub fn input_field_typing_system(ctx: &mut Context) {
 }
 
 pub fn input_field_render_system(ctx: &mut Context) {
-    let mut query = ctx.world.query::<(&GuiInputField, &Transform, &GuiBox, Option<&Visible>)>();
+    let mut query = ctx.world.query::<(&GuiInputField, &Transform, &GuiBox, Option<&Visible>, Option<&FontComponent>)>();
 
-    for (_, (input_field, transform, gui_box, visibility)) in query.iter() {
+    for (_, (input_field, transform, gui_box, visibility, font_opt)) in query.iter() {
         let is_visible = visibility.map_or(true, |v| v.0);
         if !is_visible {
             continue;
@@ -403,16 +418,33 @@ pub fn input_field_render_system(ctx: &mut Context) {
     
         let baseline_y = text_y_top + input_field.font_size;
 
-        draw_text(
-            &input_field.text,
-            text_x,
-            baseline_y,
-            input_field.font_size,
-            input_field.color
-        );
+        let font_to_use: Option<&Font> = font_opt.and_then(|f| ctx.asset_server.get_font(&f.0));
+
+        if let Some(font) = font_to_use {
+            draw_text_ex(
+                &input_field.text,
+                text_x,
+                baseline_y,
+                TextParams {
+                    font: Some(font),
+                    font_size: input_field.font_size as u16,
+                    color: input_field.color,
+                    ..Default::default()
+                }
+            );
+        }
+        else {
+            draw_text(
+                &input_field.text,
+                text_x,
+                baseline_y,
+                input_field.font_size,
+                input_field.color
+            );
+        }
 
         if input_field.is_focused && input_field.caret_visible {
-            let text_dims = measure_text(&input_field.text, None, input_field.font_size as u16, 1.0);
+            let text_dims = measure_text(&input_field.text, font_to_use, input_field.font_size as u16, 1.0);
             
             let caret_x = text_x + text_dims.width;
             let caret_width = 2.0;

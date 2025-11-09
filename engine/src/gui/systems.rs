@@ -60,9 +60,9 @@ pub fn button_interaction_system(ctx: &mut Context) {
     // On récupère les dimensions de l'écran
     let (screen_w, screen_h) = (screen_width(), screen_height());
 
-    let mut query = ctx.world.query::<(&mut GuiButton, &Transform, &GuiBox, Option<&Visible>)>();
+    let mut query = ctx.world.query::<(&mut GuiButton, &Transform, &GuiBox, Option<&Visible>, Option<&HorizontalAlignment>, Option<&VerticalAlignment>)>();
 
-    for (_, (button, transform, gui_box, visibility)) in query.iter() {
+    for (_, (button, transform, gui_box, visibility, h_align, v_align)) in query.iter() {
         let is_visible = visibility.map_or(true, |v| v.0);
 
         if !is_visible {
@@ -73,12 +73,28 @@ pub fn button_interaction_system(ctx: &mut Context) {
 
         if !gui_box.screen_space { continue; }
 
-        let x = transform.position.x;
-        let y = transform.position.y;
+        let mut x = transform.position.x;
+        let mut y = transform.position.y;
         
         // On résout les dimensions en pixels
         let w = gui_box.width.resolve(screen_w);
         let h = gui_box.height.resolve(screen_h);
+
+        if let Some(h_align) = h_align {
+            match h_align.0 {
+                HorizontalAlignmentType::Left => { /* Comportement par défaut */ }
+                HorizontalAlignmentType::Center => x -= w / 2.0,
+                HorizontalAlignmentType::Right => x -= w,
+            }
+        }
+        
+        if let Some(v_align) = v_align {
+            match v_align.0 {
+                VerticalAlignmentType::Top => { /* Comportement par défaut */ }
+                VerticalAlignmentType::Center => y -= h / 2.0,
+                VerticalAlignmentType::Bottom => y -= h,
+            }
+        }
 
         let is_hovered = mouse_x >= x && mouse_x <= (x + w) && mouse_y >= y && mouse_y <= (y + h);
 

@@ -21,9 +21,9 @@
                     "width": "100%",
                     "height": "5%",
                     "color": {
-                        "r": 0.181,
-                        "g": 0.192,
-                        "b": 0.222,
+                        "r": 0.107,
+                        "g": 0.113,
+                        "b": 0.132,
                         "a": 1.0
                     },
                     "border_radius": 0.0,
@@ -39,15 +39,15 @@
                 "Parent": "editor_header",
                 "GuiLocalOffset": {
                     "x": "1%",
-                    "y": "1%"
+                    "y": "50%"
                 },
                 "GuiBox": {
                     "width": "5%",
-                    "height": "2%",
+                    "height": "3%",
                     "color": {
-                        "r": 0.181,
-                        "g": 0.192,
-                        "b": 0.222,
+                        "r": 0.107,
+                        "g": 0.113,
+                        "b": 0.132,
                         "a": 1.0
                     },
                     "border_radius": 10.0,
@@ -55,15 +55,15 @@
                 },
                 "GuiButton": {
                     "normal_color": {
-                        "r": 0.181,
-                        "g": 0.192,
-                        "b": 0.222,
+                        "r": 0.107,
+                        "g": 0.113,
+                        "b": 0.132,
                         "a": 1.0
                     },
                     "hovered_color": {
-                        "r": 0.206,
-                        "g": 0.222,
-                        "b": 0.262,
+                        "r": 0.181,
+                        "g": 0.192,
+                        "b": 0.222,
                         "a": 1.0
                     },
                     "pressed_color": {
@@ -74,7 +74,9 @@
                     },
                     "state": "idle",
                     "just_clicked": false
-                }
+                },
+                "VerticalAlignment": "center",
+                "FilesMenuButton": {}
             }
         },
         {
@@ -96,7 +98,7 @@
                 "FontComponent": "roboto-regular",
                 "GuiLocalOffset": {
                     "x": "50%",
-                    "y": "50%"
+                    "y": "0%"
                 },
                 "VerticalAlignment": "center",
                 "HorizontalAlignment": "center"

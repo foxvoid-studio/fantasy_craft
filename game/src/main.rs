@@ -28,6 +28,7 @@ async fn main() {
 
     app
         .with_splash_screen_enabled(false)
+        .with_assets_file("resources/assets.json".to_string())
         .with_scene_path("resources/scenes/dev.json".to_string())
         .add_plugin(Default2dPlugin)
         .add_plugin(DebugPlugin)

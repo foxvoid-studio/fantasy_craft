@@ -16,6 +16,7 @@ pub struct App {
     pub scene_loader: SceneLoader,
     pub window_conf: Conf,
     pub scene_path: Option<String>,
+    pub assets_file: Option<String>,
     show_splash_screen: bool,
     splash_screen_logo: String,
     splash_screen_background_color: Color
@@ -41,6 +42,7 @@ impl App {
             window_conf: conf,
             scene_path: None,
             show_splash_screen: true,
+            assets_file: None,
             splash_screen_logo: "resources/textures/logo_engine.png".to_string(),
             splash_screen_background_color: Color::new(1.0, 0.980392157, 0.960784314, 1.0)
         }
@@ -63,6 +65,11 @@ impl App {
 
     pub fn with_scene_path(&mut self, scene_path: String) -> &mut Self {
         self.scene_path = Some(scene_path);
+        self
+    }
+
+    pub fn with_assets_file(&mut self, file_path: String) -> &mut Self {
+        self.assets_file = Some(file_path);
         self
     }
 
@@ -102,9 +109,15 @@ impl App {
             // --- Création d'une future pour le chargement ---
             let mut loading_asset_server = AssetServer::new();
 
+            let asset_path_for_future = self.assets_file.clone();
+
             let mut load_future: BoxFuture<'static, (AssetServer, Result<(), Box<dyn std::error::Error>>)> =
                 Box::pin(async move {
-                    let result = loading_asset_server.load_assets_from_file("resources/assets.json").await;
+                    let result = if let Some(path) = asset_path_for_future {
+                        loading_asset_server.load_assets_from_file(&path).await
+                    } else {
+                        Ok(())
+                    };
                     (loading_asset_server, result)
                 });
 
@@ -144,10 +157,13 @@ impl App {
         } else {
             // --- Pas de splash : on charge directement les assets ---
             let mut asset_server = AssetServer::new();
-            asset_server
-                .load_assets_from_file("resources/assets.json")
-                .await
-                .expect("Failed to load assets from JSON file");
+
+            if let Some(path) = &self.assets_file {
+                asset_server
+                    .load_assets_from_file(path)
+                    .await
+                    .expect("Failed to load assets from JSON file");
+            }
 
             maybe_asset_server = Some(asset_server);
         }

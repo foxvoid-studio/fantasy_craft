@@ -1,8 +1,10 @@
+use std::process::exit;
+
 use hecs::Entity;
 use macroquad::prelude::*;
-use engine::{gui::components::TextDisplay, prelude::*};
+use engine::{core::focus::InputFocus, gui::components::TextDisplay, prelude::*};
 use ::rand::{seq::IteratorRandom, thread_rng, Rng};
-use crate::components::{AnimationPrefix, Behavior, BehaviorComponent, ClickMeAction, FpsDisplay, NpcTag, PlayerTag};
+use crate::components::{AnimationPrefix, Behavior, BehaviorComponent, FpsDisplay, MainMenu, NpcTag, PlayerTag, QuitButton};
 
 pub fn npc_behavior_system(ctx: &mut Context) {
     for (_, (transform, npc, behavior, state, direction, speed, animation_comp)) in ctx.world.query::<(&mut Transform, &mut NpcTag, &BehaviorComponent, &mut StateComponent, &mut DirectionComponent, &Speed, &mut AnimationComponent)>().iter() {
@@ -11,7 +13,7 @@ pub fn npc_behavior_system(ctx: &mut Context) {
                 state.0 = State::Idle;
             },
             Behavior::Wander => {
-                npc.wander_time += ctx.dt;
+                npc.wander_time += ctx.dt();
                 let mut rng = thread_rng();
 
                 if npc.wander_time >= npc.wander_target_duration {
@@ -36,7 +38,7 @@ pub fn npc_behavior_system(ctx: &mut Context) {
                         Direction::Left => vec2(-1.0, 0.0),
                         Direction::Right => vec2(1.0, 0.0)
                     };
-                    transform.position += direction_vec * speed.0 * ctx.dt;
+                    transform.position += direction_vec * speed.0 * ctx.dt();
                 }
             }
         }
@@ -46,7 +48,11 @@ pub fn npc_behavior_system(ctx: &mut Context) {
 }
 
 pub fn player_update(ctx: &mut Context) {
-    let input_is_captured = ctx.input_focus.is_captured_by_ui;
+    let input_is_captured = if let Some(input_focus) = ctx.get_resource::<InputFocus>() {
+        input_focus.is_captured_by_ui
+    } else {
+        false
+    };
 
     let player_entities: Vec<Entity> = ctx.world.query::<&PlayerTag>()
         .iter()
@@ -108,7 +114,7 @@ pub fn player_update(ctx: &mut Context) {
 
 pub fn fps_display_update(ctx: &mut Context) {
     for (_, (fps_display, text_display)) in ctx.world.query::<(&mut FpsDisplay, &mut TextDisplay)>().iter() {
-        fps_display.fps_timer += ctx.dt;
+        fps_display.fps_timer += ctx.dt();
 
         if fps_display.fps_timer >= 1.0 {
             fps_display.displayed_fps = get_fps();
@@ -119,7 +125,7 @@ pub fn fps_display_update(ctx: &mut Context) {
 }
 
 pub fn check_player_npc_collision(ctx: &mut Context) {
-    for event in ctx.collision_events.iter() {
+    for event in ctx.resource::<CollisionEvents>().0.iter() {
         let e_a = event.entity_a;
         let e_b = event.entity_b;
 
@@ -138,13 +144,26 @@ pub fn check_player_npc_collision(ctx: &mut Context) {
     }
 }
 
-pub fn click_me_system(ctx: &mut Context) {
-    let mut query = ctx.world.query::<(&mut GuiButton, &ClickMeAction)>();
+pub fn quit_button_system(ctx: &mut Context) {
+    let mut query = ctx.world.query::<(&mut GuiButton, &QuitButton)>();
 
-    for (_, (button, _action)) in query.iter() {
+    for (_, (button, _quit)) in query.iter() {
         if button.just_clicked {
-            println!("Click me OK");
-            button.just_clicked = false;
+            exit(0);
+        }
+    }
+}
+
+pub fn toggle_main_menu_system(ctx: &mut Context) {
+    if is_key_pressed(KeyCode::Escape) {
+        for (_, (_main_menu, visible)) in ctx.world.query::<(&MainMenu, &mut Visible)>().iter() {
+            visible.0 = !visible.0;
+
+            ctx.game_state = if visible.0 {
+                GameState::Menu
+            } else {
+                GameState::Playing
+            };
         }
     }
 }

@@ -70,9 +70,11 @@ impl ComponentLoader for AnimationComponentLoader {
 }
 
 pub fn update_animations(ctx: &mut Context) {
+    let dt = ctx.dt().clone();
+
     for (_, animation_comp) in ctx.world.query::<&AnimationComponent>().iter() {
         if let Some(animation) = ctx.asset_server.get_animation_mut(&animation_comp.0) {
-            animation.update(ctx.dt);
+            animation.update(dt);
         }
     }
 }
@@ -99,7 +101,7 @@ impl Plugin for AnimationPlugin {
             ))
             .add_system(Stage::Render, System::new(
                 animation_render_system,
-                vec![GameState::Playing]
+                vec![GameState::Playing, GameState::Menu]
             ));
     }
 }

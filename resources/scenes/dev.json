@@ -95,6 +95,7 @@
                         "y": 1.0
                     }
                 },
+                "GuiElement": {},
                 "GuiBox": {
                     "width": 140.0,
                     "height": 80.0,
@@ -130,6 +131,7 @@
                         "y": 1.0
                     }
                 },
+                "GuiElement": {},
                 "TextDisplay": {
                     "text": "Debug Menu",
                     "color": {
@@ -167,6 +169,7 @@
                         "y": 1.0
                     }
                 },
+                "GuiElement": {},
                 "FpsDisplay": {
                     "fps_timer": 0.0,
                     "displayed_fps": 60

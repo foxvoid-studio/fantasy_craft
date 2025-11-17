@@ -5,9 +5,9 @@ mod components;
 mod systems;
 mod plugins;
 
-use crate::components::{ClickMeActionLoader, FpsDisplayLoader};
+use crate::components::{FpsDisplayLoader};
 use crate::plugins::{NpcPlugin, PlayerPlugin};
-use crate::systems::{click_me_system, fps_display_update};
+use crate::systems::{fps_display_update};
 
 fn window_conf() -> Conf {
     Conf {
@@ -23,8 +23,7 @@ async fn main() {
     let mut app = App::new(window_conf());
 
     app.scene_loader
-        .register("FpsDisplay", Box::new(FpsDisplayLoader))
-        .register("ClickMeAction", Box::new(ClickMeActionLoader));
+        .register("FpsDisplay", Box::new(FpsDisplayLoader));
 
     app
         .with_splash_screen_enabled(false)
@@ -36,10 +35,7 @@ async fn main() {
         .add_plugin(NpcPlugin)
         .add_system(Stage::Update, System::new(
             fps_display_update,
-            vec![GameState::Playing]
-        ))
-        .add_system(Stage::Update, System::new(
-            click_me_system, vec![GameState::Playing]
+            vec![GameState::Playing, GameState::Menu]
         ));
 
     app.run().await

@@ -17,6 +17,7 @@
                         "y": 1.0
                     }
                 },
+                "GuiElement": {},
                 "GuiBox": {
                     "width": "100%",
                     "height": "100%",
@@ -29,13 +30,15 @@
                     "border_radius": 0.0,
                     "screen_space": true
                 },
-                "Visible": true
+                "Visible": false,
+                "MainMenu": {}
             }
         },
         {
             "id": "main_menu_panel",
             "components": {
                 "Transform": {},
+                "GuiElement": {},
                 "Parent": "main_menu_layout",
                 "GuiBox": {
                     "width": "60%",
@@ -59,6 +62,7 @@
             "id": "main_menu_label",
             "components": {
                 "Transform": {},
+                "GuiElement": {},
                 "Parent": "main_menu_panel",
                 "GuiLocalOffset": {
                     "x": "50%",
@@ -84,6 +88,7 @@
             "id": "main_menu_quit_button",
             "components": {
                 "Transform": {},
+                "GuiElement": {},
                 "Parent": "main_menu_panel",
                 "GuiLocalOffset": {
                     "x": "50%",
@@ -111,24 +116,45 @@
                         "a": 1.0
                     },
                     "hovered_color": {
-                        "r": 0.065,
-                        "g": 0.093,
-                        "b": 0.157,
+                        "r": 0.095,
+                        "g": 0.135,
+                        "b": 0.215,
                         "a": 1.0
                     },
                     "pressed_color": {
-                        "r": 0.065,
-                        "g": 0.093,
-                        "b": 0.157,
+                        "r": 0.045,
+                        "g": 0.065,
+                        "b": 0.110,
                         "a": 1.0
                     }
-                }
+                },
+                "QuitButton": {}
             }
         },
         {
             "id": "main_menu_quit_button_label",
             "components": {
-                
+                "Transform": {},
+                "GuiElement": {},
+                "Parent": "main_menu_quit_button",
+                "GuiLocalOffset": {
+                    "x": "0%",
+                    "y": "0%"
+                },
+                "HorizontalAlignment": "center",
+                "VerticalAlignment": "center",
+                "TextDisplay": {
+                    "text": "Quit",
+                    "color": {
+                        "r": 1.0,
+                        "g": 1.0,
+                        "b": 1.0,
+                        "a": 1.0
+                    },
+                    "font_size": 20.0,
+                    "screen_space": true
+                },
+                "FontComponent": "roboto-regular"
             }
         }
     ]

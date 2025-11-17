@@ -13,11 +13,11 @@ impl Plugin for TiledMapPlugin {
         app
             .add_system(Stage::Render, System::new(
                 tilemap_layer_render_system,
-                vec![GameState::Playing]
+                vec![GameState::Playing, GameState::Menu]
             ))
             .add_system(Stage::Render, System::new(
                 tilemap_render_system,
-                vec![GameState::Playing]
+                vec![GameState::Playing, GameState::Menu]
             ));
     }
 }

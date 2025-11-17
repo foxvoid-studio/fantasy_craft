@@ -1,111 +1,138 @@
-use std::collections::HashSet;
+// --- IMPORTS ---
+use std::collections::{HashMap, HashSet};
 use hecs::Entity;
 use macroquad::prelude::*;
-use crate::core::context::Context;
+use crate::core::context::Context; use crate::core::focus::InputFocus;
+// Your refactored context
 use crate::gui::components::{TextDisplay, GuiBox};
 use crate::physics::components::Transform;
-use crate::prelude::{ButtonState, FontComponent, GuiButton, GuiCheckbox, GuiDraggable, GuiImage, GuiInputField, GuiLayout, GuiLocalOffset, GuiSlider, HorizontalAlignment, HorizontalAlignmentType, Parent, VerticalAlignment, VerticalAlignmentType, Visible};
+use crate::prelude::{
+    ButtonState, FontComponent, GuiButton, GuiCheckbox, GuiDraggable, GuiElement, GuiImage, GuiInputField, GuiLayout, GuiLocalOffset, GuiSlider, HorizontalAlignment, HorizontalAlignmentType, Parent, VerticalAlignment, VerticalAlignmentType, Visible
+};
+
+// --- RESOURCE WRAPPER STRUCT ---
+// (This is correct, keep it here or move it to your resources module)
+/// Wrapper for the UI rectangle cache.
+#[derive(Debug, Default)]
+pub struct UiResolvedRects(pub HashMap<Entity, (Vec2, Vec2)>);
+
+#[derive(Debug, Clone, Copy)]
+pub struct PreviousMousePosition(pub Vec2);
+
+// --- SYSTEMS ---
 
 pub fn gui_resolve_layout_system(ctx: &mut Context) {
     let (screen_w, screen_h) = (screen_width(), screen_height());
     
-    // Clear the map from the previous frame
-    ctx.ui_resolved_rects.clear();
+    ctx.resource_mut::<UiResolvedRects>().0.clear();
 
-    // 1. Get all children
-    let mut entities: HashSet<Entity> = ctx.world.query::<&Parent>()
+    // ... (Collecte des 'entities' ... c'est correct)
+    let mut entities: HashSet<Entity> = ctx.world.query::<(&Parent, &GuiElement)>()
         .iter()
         .map(|(e, _)| e)
         .collect();
-        
-    // 2. Get all roots (Entities with GuiBox but NO Parent)
+
     entities.extend(
         ctx.world.query::<&GuiBox>().without::<&Parent>()
             .iter()
             .map(|(e, _)| e)
     );
-
     let mut entities_to_process: Vec<Entity> = entities.into_iter().collect();
-    let mut iterations = 0; // Failsafe
+    
+    let mut iterations = 0;
     
     while !entities_to_process.is_empty() && iterations < 10 {
+        // --- PHASE 1: COLLECTER LES MODIFICATIONS ---
+        let mut results_to_apply = Vec::new();
         let mut processed_this_iteration = Vec::new();
+        
+        // Emprunt immuable de la map pour cette phase
+        let resolved_rects_map = &ctx.resource::<UiResolvedRects>().0;
 
         entities_to_process.retain(|&entity| {
-            // --- FIX: Dereference `entity` to `*entity` ---
             let parent_opt = ctx.world.get::<&Parent>(entity).ok();
 
-            // Determine the "context"
             let (parent_w, parent_h, parent_pos) = 
-                // --- FIX: Use `.as_ref()` to borrow, not move ---
                 if let Some(parent) = parent_opt.as_ref() { 
-                    if let Some((pos, size)) = ctx.ui_resolved_rects.get(&parent.0) {
+                    // Lecture depuis la map immuable
+                    if let Some((pos, size)) = resolved_rects_map.get(&parent.0) {
                         (size.x, size.y, *pos)
                     } else {
-                        return true; // Keep
+                        return true; // Garder (parent pas encore traité)
                     }
                 } else {
-                    // No parent, resolve against screen
+                    // ... (logique de la racine, inchangée)
                     if let Ok(layout) = ctx.world.get::<&GuiLayout>(entity) {
                         let root_x = layout.x.resolve(screen_w);
                         let root_y = layout.y.resolve(screen_h);
                         (screen_w, screen_h, vec2(root_x, root_y))
                     } else {
-                        // Use (0,0) as base for non-layout roots
                         (screen_w, screen_h, Vec2::ZERO)
                     }
                 };
 
-            // 1. Resolve Size
+            // 1. Résoudre Taille (lecture seule)
             let resolved_size = if let Ok(gui_box) = ctx.world.get::<&GuiBox>(entity) {
                 vec2(gui_box.width.resolve(parent_w), gui_box.height.resolve(parent_h))
             } else {
                 Vec2::ZERO
             };
 
-            // 2. Resolve Position
+            // 2. Résoudre Position (lecture seule)
             let mut resolved_pos;
-            // --- FIX: Use `.as_ref()` or `.is_some()` ---
             if parent_opt.is_some() {
-                // Child Logic: use parent pos + local offset
                 resolved_pos = parent_pos;
                 if let Ok(local_offset) = ctx.world.get::<&GuiLocalOffset>(entity) {
                     resolved_pos.x += local_offset.x.resolve(parent_w);
                     resolved_pos.y += local_offset.y.resolve(parent_h);
                 }
             } else {
-                // Root Logic
-                if let Ok(layout) = ctx.world.get::<&GuiLayout>(entity) {
+                 if let Ok(layout) = ctx.world.get::<&GuiLayout>(entity) {
                     resolved_pos = vec2(layout.x.resolve(screen_w), layout.y.resolve(screen_h));
                 } else if let Ok(transform) = ctx.world.get::<&Transform>(entity) {
                     resolved_pos = transform.position;
                 } else {
-                    resolved_pos = Vec2::ZERO; // Fallback
+                    resolved_pos = Vec2::ZERO;
                 }
             }
             
-            // 3. Store the final rect
-            ctx.ui_resolved_rects.insert(entity, (resolved_pos, resolved_size));
+            // 3. Stocker le résultat au lieu de l'insérer
+            results_to_apply.push((entity, resolved_pos, resolved_size));
             
-            // 4. Update the entity's Transform component
-            // --- FIX: Re-add GuiDraggable check ---
+            processed_this_iteration.push(entity);
+            false // Retirer de entities_to_process
+        });
+
+        // --- PHASE 2: APPLIQUER LES MODIFICATIONS ---
+        
+        // Failsafe
+        if processed_this_iteration.is_empty() && !entities_to_process.is_empty() {
+            eprintln!("Erreur de layout GUI : impossible de résoudre certaines entités.");
+            break; 
+        }
+
+        let (_world, resources) = (&mut ctx.world, &mut ctx.resources);
+
+        // 2. Obtenez l'accès mutable à la map DEPUIS 'resources'
+        let rect_map_mut = &mut resources.get_mut::<UiResolvedRects>()
+            .expect("Ressource UiResolvedRects manquante")
+            .0;
+
+        for (entity, pos, size) in results_to_apply {
+            // 1. Insérer dans la map des ressources
+            rect_map_mut.insert(entity, (pos, size));
+
+            // 2. Mettre à jour le Transform
             let is_dragging = ctx.world.get::<&GuiDraggable>(entity)
                 .map_or(false, |d| d.is_dragging);
 
             if !is_dragging {
                 if let Ok(mut transform) = ctx.world.get::<&mut Transform>(entity) {
-                    transform.position = resolved_pos;
+                    transform.position = pos;
                 }
             }
-
-            processed_this_iteration.push(entity);
-            false // Remove from entities_to_process
-        });
-
-        // Failsafe check
-        if processed_this_iteration.is_empty() && !entities_to_process.is_empty() {
-            break;
         }
+        
         iterations += 1;
     }
 }
@@ -114,6 +141,9 @@ pub fn button_interaction_system(ctx: &mut Context) {
     let (mouse_x, mouse_y) = mouse_position();
     let is_pressed = is_mouse_button_down(MouseButton::Left);
     let just_clicked = is_mouse_button_pressed(MouseButton::Left);
+
+    // --- MODIFIED: Get map once ---
+    let resolved_rects_map = &ctx.resource::<UiResolvedRects>().0;
 
     let mut query = ctx.world.query::<(
         &mut GuiButton, 
@@ -132,8 +162,9 @@ pub fn button_interaction_system(ctx: &mut Context) {
 
         button.just_clicked = false;
 
+        // --- MODIFIED ---
         let (resolved_pos, resolved_size) = 
-            if let Some(rect) = ctx.ui_resolved_rects.get(&entity) {
+            if let Some(rect) = resolved_rects_map.get(&entity) {
                 *rect
             } else {
                 continue; // Not processed by layout system
@@ -146,6 +177,7 @@ pub fn button_interaction_system(ctx: &mut Context) {
         let w = resolved_size.x;
         let h = resolved_size.y;
 
+        // (Alignment logic is correct)
         if let Some(h_align) = h_align {
             match h_align.0 {
                 HorizontalAlignmentType::Left => { /* Comportement par défaut */ }
@@ -164,6 +196,7 @@ pub fn button_interaction_system(ctx: &mut Context) {
 
         let is_hovered = mouse_x >= x && mouse_x <= (x + w) && mouse_y >= y && mouse_y <= (y + h);
 
+        // (Button state logic is correct)
         match button.state {
             ButtonState::Idle => {
                 if is_hovered {
@@ -194,26 +227,26 @@ pub fn button_interaction_system(ctx: &mut Context) {
 }
 
 pub fn gui_box_render_system(ctx: &mut Context) {
+    // --- MODIFIED: Get map once ---
+    let resolved_rects_map = &ctx.resource::<UiResolvedRects>().0;
+
     let mut query = ctx.world.query::<(
         &GuiBox,
-        // &Transform, // We no longer read the transform, we get pos from our map
         Option<&GuiButton>,
         Option<&Visible>,
         Option<&HorizontalAlignment>,
         Option<&VerticalAlignment>,
     )>();
 
-    // We iterate over entities using .iter() to get the entity ID
     for (entity, (gui_box, button_opt, visibility, h_align, v_align)) in query.iter() {
         let is_visible = visibility.map_or(true, |v| v.0);
         if !is_visible || !gui_box.screen_space {
             continue;
         }
 
-        // --- THE BIG CHANGE ---
-        // Get the resolved position and size from the context map
+        // --- MODIFIED ---
         let (resolved_pos, resolved_size) = 
-            if let Some(rect) = ctx.ui_resolved_rects.get(&entity) {
+            if let Some(rect) = resolved_rects_map.get(&entity) {
                 *rect // Dereference the tuple (pos, size)
             } else {
                 continue; // This UI element was not processed by the layout system
@@ -225,10 +258,7 @@ pub fn gui_box_render_system(ctx: &mut Context) {
         let h = resolved_size.y;
         // --- END OF CHANGE ---
 
-
-        // --- Handle Alignment ---
-        // (This logic is now applied *after* an element's position
-        // has already been calculated. This is correct.)
+        // (Alignment logic is correct)
         if let Some(h_align) = h_align {
             match h_align.0 {
                 HorizontalAlignmentType::Left => { /* Default */ }
@@ -256,7 +286,7 @@ pub fn gui_box_render_system(ctx: &mut Context) {
             };
         }
 
-        // --- MANUAL DRAWING LOGIC (Using RenderTarget) ---
+        // (Drawing logic is correct)
         if radius == 0.0 {
             draw_rectangle(x, y, w, h, final_color);
         } else {
@@ -307,6 +337,8 @@ pub fn gui_box_render_system(ctx: &mut Context) {
 }
 
 pub fn text_render_system(ctx: &mut Context) {
+    // This system correctly uses Transform.position, which is set by the
+    // gui_resolve_layout_system. No changes are needed.
     for (_, (text_display, transform, visibility, font_opt, h_align, v_align)) in ctx.world.query::<(&TextDisplay, &Transform, Option<&Visible>, Option<&FontComponent>, Option<&HorizontalAlignment>, Option<&VerticalAlignment>)>().iter() {
         let is_visible = visibility.map_or(true, |v| v.0);
         if !is_visible || !text_display.screen_space {
@@ -315,43 +347,33 @@ pub fn text_render_system(ctx: &mut Context) {
 
         let font = font_opt.and_then(|f| ctx.asset_server.get_font(&f.0));
         
-        // On mesure le texte pour connaître sa taille
         let text_size = measure_text(&text_display.text, font, text_display.font_size as u16, 1.0);
 
-        // --- LOGIQUE D'ALIGNEMENT AMÉLIORÉE ---
-        
-        // Ancre horizontale
+        // --- Alignment Logic (Correct) ---
         let mut draw_x = transform.position.x;
         if let Some(h_align) = h_align {
             match h_align.0 {
-                HorizontalAlignmentType::Left => { /* Défaut */ }
+                HorizontalAlignmentType::Left => { /* Default */ }
                 HorizontalAlignmentType::Center => draw_x = transform.position.x - text_size.width / 2.0,
                 HorizontalAlignmentType::Right => draw_x = transform.position.x - text_size.width,
             }
         }
         
-        // Ancre verticale (gestion de la baseline)
-        // text_size.offset_y est la distance du haut de la boîte de texte (0.0) à la baseline
-        
-        // Par défaut: Alignement HAUT
         let mut baseline_y = transform.position.y + text_size.offset_y; 
         
         if let Some(v_align) = v_align {
             match v_align.0 {
-                VerticalAlignmentType::Top => { /* Déjà défini par défaut */ }
-                // Alignement MILIEU: ancre_y - (hauteur_totale / 2) + offset_baseline
+                VerticalAlignmentType::Top => { /* Default */ }
                 VerticalAlignmentType::Center => baseline_y = transform.position.y - (text_size.height / 2.0) + text_size.offset_y,
-                // Alignement BAS: ancre_y - hauteur_totale + offset_baseline
                 VerticalAlignmentType::Bottom => baseline_y = transform.position.y - text_size.height + text_size.offset_y,
             }
         }
-        // --- FIN DE LA LOGIQUE D'ALIGNEMENT ---
+        // --- End Alignment Logic ---
 
-        // Rendu avec les positions alignées
         if let Some(font) = font {
             draw_text_ex(
                 &text_display.text,
-                draw_x.round(), // .round() pour un texte net
+                draw_x.round(),
                 baseline_y.round(),
                 TextParams {
                     font: Some(font),
@@ -375,12 +397,16 @@ pub fn text_render_system(ctx: &mut Context) {
 
 pub fn draggable_system(ctx: &mut Context) {
     let (mouse_x, mouse_y) = mouse_position();
-
     let current_mouse_pos = vec2(mouse_x, mouse_y);
-    let delta = current_mouse_pos - ctx.prev_mouse_pos;
+    
+    // --- MODIFIED ---
+    let delta = current_mouse_pos - ctx.resource::<PreviousMousePosition>().0;
     
     let is_pressed = is_mouse_button_pressed(MouseButton::Left);
     let is_down = is_mouse_button_down(MouseButton::Left);
+
+    // --- MODIFIED: Get map once ---
+    let resolved_rects_map = &ctx.resource::<UiResolvedRects>().0;
 
     let mut query = ctx.world.query::<(&mut GuiDraggable, &mut Transform, &GuiBox, Option<&Visible>)>();
 
@@ -391,8 +417,9 @@ pub fn draggable_system(ctx: &mut Context) {
             continue;
         }
 
+        // --- MODIFIED ---
         let (_resolved_pos, resolved_size) = 
-            if let Some(rect) = ctx.ui_resolved_rects.get(&entity) {
+            if let Some(rect) = resolved_rects_map.get(&entity) {
                 *rect
             } else {
                 continue; // Not processed by layout system
@@ -402,14 +429,16 @@ pub fn draggable_system(ctx: &mut Context) {
             if !is_down {
                 draggable.is_dragging = false;
             } else {
+                // This is correct: it modifies the Transform directly,
+                // which will be used as the base pos next frame.
                 transform.position.x += delta.x;
                 transform.position.y += delta.y;
             }
         } else {
+            // Use the transform's position for hover checking, as it's
+            // the most up-to-date position.
             let x = transform.position.x;
             let y = transform.position.y;
-
-            // On résout les dimensions en pixels
             let w = resolved_size.x;
             let h = resolved_size.y;
 
@@ -427,6 +456,9 @@ pub fn slider_interaction_system(ctx: &mut Context) {
     let is_pressed = is_mouse_button_pressed(MouseButton::Left);
     let is_down = is_mouse_button_down(MouseButton::Left);
 
+    // --- MODIFIED: Get map once ---
+    let resolved_rects_map = &ctx.resource::<UiResolvedRects>().0;
+
     let mut query = ctx.world.query::<(&mut GuiSlider, &GuiBox, Option<&Visible>)>();
 
     for (entity, (slider, _gui_box, visibility)) in query.iter() {
@@ -436,8 +468,9 @@ pub fn slider_interaction_system(ctx: &mut Context) {
             continue;
         }
 
+        // --- MODIFIED ---
         let (resolved_pos, resolved_size) = 
-            if let Some(rect) = ctx.ui_resolved_rects.get(&entity) {
+            if let Some(rect) = resolved_rects_map.get(&entity) {
                 *rect
             } else {
                 continue;
@@ -455,14 +488,12 @@ pub fn slider_interaction_system(ctx: &mut Context) {
                 slider.is_dragging_handle = false;
             } else {
                 let relative_x = mouse_x - x;
-                // w est maintenant résolu
                 let normalized_value = (relative_x / w).clamp(0.0, 1.0);
                 slider.value = slider.min + normalized_value * (slider.max - slider.min);
             }
         } else if is_hovered && is_pressed {
             slider.is_dragging_handle = true;
             let relative_x = mouse_x - x;
-            // w est maintenant résolu
             let normalized_value = (relative_x / w).clamp(0.0, 1.0);
             slider.value = slider.min + normalized_value * (slider.max - slider.min);
         }
@@ -470,6 +501,9 @@ pub fn slider_interaction_system(ctx: &mut Context) {
 }
 
 pub fn slider_render_system(ctx: &mut Context) {
+    // --- MODIFIED: Get map once ---
+    let resolved_rects_map = &ctx.resource::<UiResolvedRects>().0;
+    
     let mut query = ctx.world.query::<(&GuiSlider, &GuiBox, Option<&Visible>)>();
 
     for (entity, (slider, _gui_box, visibility)) in query.iter() {
@@ -479,8 +513,9 @@ pub fn slider_render_system(ctx: &mut Context) {
             continue;
         }
 
+        // --- MODIFIED ---
         let (resolved_pos, resolved_size) = 
-            if let Some(rect) = ctx.ui_resolved_rects.get(&entity) {
+            if let Some(rect) = resolved_rects_map.get(&entity) {
                 *rect
             } else {
                 continue;
@@ -494,22 +529,20 @@ pub fn slider_render_system(ctx: &mut Context) {
         let normalized_value = (slider.value - slider.min) / (slider.max - slider.min).max(f32::EPSILON);
         let handle_width = slider.handle_width;
         
-        // w est maintenant résolu
         let handle_x = x + (normalized_value * w) - (handle_width / 2.0);
 
         draw_rectangle(
-            // w est maintenant résolu
             handle_x.clamp(x, x + w - handle_width),
             y,
             handle_width,
-            h, // h est maintenant résolu
+            h,
             slider.handle_color
         )
     }
 }
 
 pub fn checkbox_logic_system(ctx: &mut Context) {
-    // Ce système n'utilise pas GuiBox, donc aucun changement n'est nécessaire
+    // This system doesn't use the map, no changes needed.
     let mut query = ctx.world.query::<(&GuiButton, &mut GuiCheckbox, Option<&Visible>)>();
 
     for (_, (button, checkbox, visibility)) in query.iter() {
@@ -526,6 +559,9 @@ pub fn checkbox_logic_system(ctx: &mut Context) {
 }
 
 pub fn checkbox_render_system(ctx: &mut Context) {
+    // --- MODIFIED: Get map once ---
+    let resolved_rects_map = &ctx.resource::<UiResolvedRects>().0;
+
     let mut query = ctx.world.query::<(&GuiCheckbox, &GuiBox, Option<&Visible>)>();
 
     for (entity, (checkbox, _gui_box, visibility)) in query.iter() {
@@ -536,8 +572,9 @@ pub fn checkbox_render_system(ctx: &mut Context) {
         }
 
         if checkbox.is_checked {
+            // --- MODIFIED ---
             let (resolved_pos, resolved_size) = 
-                if let Some(rect) = ctx.ui_resolved_rects.get(&entity) {
+                if let Some(rect) = resolved_rects_map.get(&entity) {
                     *rect
                 } else {
                     continue;
@@ -548,7 +585,6 @@ pub fn checkbox_render_system(ctx: &mut Context) {
             let w = resolved_size.x;
             let h = resolved_size.y;
 
-            // w, h sont maintenant résolus
             let padding = w * 0.2;
             draw_line(x + padding, y + padding, x + w - padding, y + h - padding, 2.0, BLACK);
             draw_line(x + w - padding, y + padding, x + padding, y + h - padding, 2.0, BLACK);
@@ -566,6 +602,9 @@ pub fn input_field_focus_system(ctx: &mut Context) {
 
     let mut clicked_entity: Option<Entity> = None;
     
+    // --- MODIFIED: Get map once ---
+    let resolved_rects_map = &ctx.resource::<UiResolvedRects>().0;
+
     let mut query = ctx.world.query::<(&GuiBox, Option<&Visible>)>();
 
     for (entity, (gui_box, visibility)) in query.iter() {
@@ -578,8 +617,9 @@ pub fn input_field_focus_system(ctx: &mut Context) {
             continue;
         }
 
+        // --- MODIFIED ---
         let (resolved_pos, resolved_size) = 
-            if let Some(rect) = ctx.ui_resolved_rects.get(&entity) {
+            if let Some(rect) = resolved_rects_map.get(&entity) {
                 *rect
             } else {
                 continue;
@@ -598,7 +638,7 @@ pub fn input_field_focus_system(ctx: &mut Context) {
         }
     }
 
-    // Logic for setting focus remains the same
+    // (Logic for setting focus is correct)
     let mut query = ctx.world.query::<&mut GuiInputField>();
     for (e, input_field) in query.iter() {
         if Some(e) == clicked_entity {
@@ -621,6 +661,12 @@ pub fn input_field_typing_system(ctx: &mut Context) {
     const KEY_REPEAT_INITIAL_DELAY: f32 = 0.4;
     const KEY_REPEAT_RATE: f32 = 0.05;
 
+    // --- MODIFIED: Get dt once ---
+    let dt = ctx.dt();
+    
+    // --- MODIFIED: Get map once ---
+    let resolved_rects_map = &ctx.resource::<UiResolvedRects>().0;
+
     let mut query = ctx.world.query::<(&mut GuiInputField, &GuiBox, Option<&FontComponent>)>();
 
     for (entity, (input_field, _gui_box, font_opt)) in query.iter() {
@@ -631,7 +677,7 @@ pub fn input_field_typing_system(ctx: &mut Context) {
             continue;
         }
         
-        // --- GESTION FLÈCHE GAUCHE (avec répétition) ---
+        // --- Left Arrow ---
         let left_pressed = is_key_pressed(KeyCode::Left);
         let left_down = is_key_down(KeyCode::Left);
         let mut move_left = false;
@@ -641,7 +687,8 @@ pub fn input_field_typing_system(ctx: &mut Context) {
             input_field.left_key_repeat_timer = KEY_REPEAT_INITIAL_DELAY;
         }
         else if left_down {
-            input_field.left_key_repeat_timer -= ctx.dt;
+            // --- MODIFIED ---
+            input_field.left_key_repeat_timer -= dt;
             if input_field.left_key_repeat_timer <= 0.0 {
                 move_left = true;
                 input_field.left_key_repeat_timer = KEY_REPEAT_RATE;
@@ -657,7 +704,7 @@ pub fn input_field_typing_system(ctx: &mut Context) {
             input_field.caret_blink_timer = 0.0;
         }
 
-        // --- GESTION FLÈCHE DROITE (avec répétition) ---
+        // --- Right Arrow ---
         let right_pressed = is_key_pressed(KeyCode::Right);
         let right_down = is_key_down(KeyCode::Right);
         let mut move_right = false;
@@ -667,7 +714,8 @@ pub fn input_field_typing_system(ctx: &mut Context) {
             input_field.right_key_repeat_timer = KEY_REPEAT_INITIAL_DELAY;
         }
         else if right_down {
-            input_field.right_key_repeat_timer -= ctx.dt;
+            // --- MODIFIED ---
+            input_field.right_key_repeat_timer -= dt;
             if input_field.right_key_repeat_timer <= 0.0 {
                 move_right = true;
                 input_field.right_key_repeat_timer = KEY_REPEAT_RATE;
@@ -686,7 +734,7 @@ pub fn input_field_typing_system(ctx: &mut Context) {
             }
         }
 
-        // --- GESTION DU BACKSPACE (Suppression) ---
+        // --- Backspace ---
         let backspace_pressed = is_key_pressed(KeyCode::Backspace);
         let backspace_down = is_key_down(KeyCode::Backspace);
         
@@ -695,7 +743,8 @@ pub fn input_field_typing_system(ctx: &mut Context) {
             should_delete = true;
             input_field.backspace_repeat_timer = KEY_REPEAT_INITIAL_DELAY;
         } else if backspace_down {
-            input_field.backspace_repeat_timer -= ctx.dt;
+            // --- MODIFIED ---
+            input_field.backspace_repeat_timer -= dt;
             if input_field.backspace_repeat_timer <= 0.0 {
                 should_delete = true;
                 input_field.backspace_repeat_timer = KEY_REPEAT_RATE;
@@ -705,7 +754,6 @@ pub fn input_field_typing_system(ctx: &mut Context) {
         }
 
         if should_delete && input_field.caret_position > 0 {
-            // Suppression sécurisée UTF-8
             let mut chars: Vec<char> = input_field.text.chars().collect();
             if input_field.caret_position <= chars.len() {
                 chars.remove(input_field.caret_position - 1);
@@ -716,7 +764,7 @@ pub fn input_field_typing_system(ctx: &mut Context) {
             }
         }
         
-        // GESTION SUPPR (Delete) - Optionnel mais pratique
+        // --- Delete Key ---
         if is_key_pressed(KeyCode::Delete) {
              let mut chars: Vec<char> = input_field.text.chars().collect();
              if input_field.caret_position < chars.len() {
@@ -727,9 +775,9 @@ pub fn input_field_typing_system(ctx: &mut Context) {
              }
         }
 
-        // --- GESTION DE LA SAISIE (Insertion) ---
+        // --- Typing ---
         while let Some(char) = get_char_pressed() {
-            if char == '\u{08}' || char == '\u{7f}' { // Backspace ou Delete (par sécurité)
+            if char == '\u{08}' || char == '\u{7f}' { // Backspace or Delete
                 continue; 
             }
 
@@ -737,9 +785,7 @@ pub fn input_field_typing_system(ctx: &mut Context) {
             let at_limit = input_field.max_chars.map_or(false, |max| char_count >= max);
         
             if !at_limit {
-                // Insertion sécurisée UTF-8 à la position du curseur
                 let mut chars: Vec<char> = input_field.text.chars().collect();
-                // Sécurité : s'assurer que la position est valide
                 let insert_pos = input_field.caret_position.min(chars.len());
                 chars.insert(insert_pos, char);
                 input_field.text = chars.into_iter().collect();
@@ -751,30 +797,28 @@ pub fn input_field_typing_system(ctx: &mut Context) {
         }
 
 
-        // --- LOGIQUE DE SCROLL (Mise à jour) ---
+        // --- Scroll Logic ---
         let font_to_use: Option<&Font> = font_opt.and_then(|f| ctx.asset_server.get_font(&f.0));
 
         let text_before_caret: String = input_field.text.chars().take(input_field.caret_position).collect();
         let caret_x_absolute = measure_text(&text_before_caret, font_to_use, input_field.font_size as u16, 1.0).width;
 
-        // Get 'w' from the resolved rects
-        let w = if let Some((_, size)) = ctx.ui_resolved_rects.get(&entity) {
+        // --- MODIFIED ---
+        let w = if let Some((_, size)) = resolved_rects_map.get(&entity) {
             size.x
         } else {
-            300.0 // Fallback, though it should be found
+            300.0 // Fallback
         };
 
         let visible_width = w - (input_field.padding.x * 2.0);
 
-        // Le reste de la logique de scroll est inchangée
+        // (Scroll logic is correct)
         if caret_x_absolute < input_field.scroll_offset {
             input_field.scroll_offset = caret_x_absolute;
         }
-
         if caret_x_absolute > input_field.scroll_offset + visible_width {
             input_field.scroll_offset = caret_x_absolute - visible_width;
         }
-
         let total_text_width = measure_text(&input_field.text, font_to_use, input_field.font_size as u16, 1.0).width;
         if total_text_width < visible_width {
              input_field.scroll_offset = 0.0;
@@ -782,8 +826,9 @@ pub fn input_field_typing_system(ctx: &mut Context) {
              input_field.scroll_offset = (total_text_width - visible_width).max(0.0);
         }
 
-        // --- CLIGNOTEMENT DU CURSEUR (Inchangé) ---
-        input_field.caret_blink_timer += ctx.dt;
+        // --- Caret Blink ---
+        // --- MODIFIED ---
+        input_field.caret_blink_timer += dt;
         if input_field.caret_blink_timer >= 0.5 {
             input_field.caret_visible = !input_field.caret_visible;
             input_field.caret_blink_timer = 0.0;
@@ -792,6 +837,9 @@ pub fn input_field_typing_system(ctx: &mut Context) {
 }
 
 pub fn input_field_render_system(ctx: &mut Context) {
+    // --- MODIFIED: Get map once ---
+    let resolved_rects_map = &ctx.resource::<UiResolvedRects>().0;
+
     let mut query = ctx.world.query::<(&GuiInputField, &GuiBox, Option<&Visible>, Option<&FontComponent>)>();
 
     for (entity, (input_field, gui_box, visibility, font_opt)) in query.iter() {
@@ -802,8 +850,9 @@ pub fn input_field_render_system(ctx: &mut Context) {
             continue;
         }
 
+        // --- MODIFIED ---
         let (resolved_pos, resolved_size) = 
-            if let Some(rect) = ctx.ui_resolved_rects.get(&entity) {
+            if let Some(rect) = resolved_rects_map.get(&entity) {
                 *rect
             } else {
                 continue;
@@ -814,10 +863,8 @@ pub fn input_field_render_system(ctx: &mut Context) {
         let w = resolved_size.x;
         let h = resolved_size.y;
 
-        // On utilise w et h résolus
         let rt_w = (w.max(1.0)) as u32;
         let rt_h = (h.max(1.0)) as u32;
-
         let rt = render_target(rt_w, rt_h);
 
         let camera = Camera2D {
@@ -838,7 +885,7 @@ pub fn input_field_render_system(ctx: &mut Context) {
 
         let font_to_use: Option<&Font> = font_opt.and_then(|f| ctx.asset_server.get_font(&f.0));
 
-        // ... (Logique de dessin du texte inchangée)
+        // (Text drawing logic is correct)
         if let Some(font) = font_to_use {
             draw_text_ex(
                 &input_field.text,
@@ -861,7 +908,7 @@ pub fn input_field_render_system(ctx: &mut Context) {
             );
         }
 
-        // ... (Logique de dessin du curseur inchangée)
+        // (Caret drawing logic is correct)
         if input_field.is_focused && input_field.caret_visible {
             let text_before_caret: String = input_field.text.chars().take(input_field.caret_position).collect();
             let caret_offset = measure_text(&text_before_caret, font_to_use, input_field.font_size as u16, 1.0).width;
@@ -878,7 +925,6 @@ pub fn input_field_render_system(ctx: &mut Context) {
 
         set_default_camera();
 
-        // On utilise w et h résolus pour dest_size
         let draw_params = DrawTextureParams {
             dest_size: Some(vec2(w, h)),
             ..Default::default()
@@ -889,19 +935,28 @@ pub fn input_field_render_system(ctx: &mut Context) {
 }
 
 pub fn input_focus_update_system(ctx: &mut Context) {
-    // Ce système n'utilise pas GuiBox, donc aucun changement n'est nécessaire
-    ctx.input_focus.is_captured_by_ui = false;
+    // --- MODIFIED ---
+    // Get the resource mutably once.
+    let (_world, resources) = (&ctx.world, &mut ctx.resources);
+
+    let input_focus = resources.get_mut::<InputFocus>()
+        .expect("Ressource InputFocus manquante");
+    input_focus.is_captured_by_ui = false;
 
     for (_, input_field) in ctx.world.query::<&GuiInputField>().iter() {
         if input_field.is_focused {
-            ctx.input_focus.is_captured_by_ui = true;
+            // --- MODIFIED ---
+            input_focus.is_captured_by_ui = true;
             break;
         }
     }
 }
 
 pub fn gui_image_render_system(ctx: &mut Context) {
-let mut query = ctx.world.query::<(&GuiImage, &Transform, Option<&GuiBox>, Option<&Visible>)>();
+    // --- MODIFIED: Get map once ---
+    let resolved_rects_map = &ctx.resource::<UiResolvedRects>().0;
+
+    let mut query = ctx.world.query::<(&GuiImage, &Transform, Option<&GuiBox>, Option<&Visible>)>();
 
     for (entity, (gui_image, transform, gui_box_opt, visibility)) in query.iter() {
         let is_visible = visibility.map_or(true, |v| v.0);
@@ -921,14 +976,14 @@ let mut query = ctx.world.query::<(&GuiImage, &Transform, Option<&GuiBox>, Optio
                 let (draw_x, draw_y, dest_size) = 
                     if gui_box_opt.is_some() {
                         // This element has a GuiBox, use the resolved rect
-                        if let Some((pos, size)) = ctx.ui_resolved_rects.get(&entity) {
+                        // --- MODIFIED ---
+                        if let Some((pos, size)) = resolved_rects_map.get(&entity) {
                             (pos.x, pos.y, *size)
                         } else {
                             continue; // Not laid out
                         }
                     } else {
                         // No GuiBox (e.g., simple icon). Use transform data.
-                        // The transform.position is set by the layout system.
                         let dest = vec2(
                             spritesheet.sprite_width * transform.scale.x, 
                             spritesheet.sprite_height * transform.scale.y

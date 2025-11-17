@@ -1,4 +1,4 @@
-use crate::{core::app::App, hierarchy::plugins::HierarchyPlugin, prelude::{AnimationPlugin, Camera2dPlugin, GameState, GuiPlugin, PhysicsPlugin, Stage, System, TiledMapPlugin, collider_debug_render_system}, utils::plugins::UtilsPlugin};
+use crate::{core::{app::App, focus::InputFocus, time::DeltaTime}, hierarchy::plugins::HierarchyPlugin, prelude::{AnimationPlugin, Camera2dPlugin, GameState, GuiPlugin, PhysicsPlugin, Stage, System, TiledMapPlugin, collider_debug_render_system}, utils::plugins::UtilsPlugin};
 
 pub trait Plugin {
     fn build(&self, app: &mut App);
@@ -8,6 +8,9 @@ pub struct Default2dPlugin;
 
 impl Plugin for Default2dPlugin {
     fn build(&self, app: &mut App) {
+        app.context.insert_resource(InputFocus::default());
+        app.context.insert_resource(DeltaTime(0.0));
+
         app
             .add_plugin(UtilsPlugin)
             .add_plugin(PhysicsPlugin)

@@ -3,6 +3,17 @@ use macroquad::prelude::*;
 use serde::Deserialize;
 use crate::{prelude::{UVec2Data, Vec2Data}, scene::scene_loader::ComponentLoader};
 
+#[derive(Debug, Default)]
+pub struct GuiElement;
+
+pub struct GuiElementLoader;
+
+impl ComponentLoader for GuiElementLoader {
+    fn load(&self, ctx: &mut crate::prelude::Context, entity: Entity, _data: &serde_json::Value) {
+        ctx.world.insert_one(entity, GuiElement).expect("Failed to insert GuiElement");
+    }
+}
+
 #[derive(Deserialize, Debug, Default)]
 pub struct ColorData {
     r: f32,

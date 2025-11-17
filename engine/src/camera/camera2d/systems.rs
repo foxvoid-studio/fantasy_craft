@@ -25,7 +25,7 @@ pub fn update_camera(ctx: &mut Context) {
     }
 
     for (_entity, (camera_comp, transform, _main)) in ctx.world.query::<(&mut CameraComponent, &mut Transform, &MainCamera)>().iter() {
-        let lerp_speed = 1.0 - (-camera_comp.lerp_factor * ctx.dt).exp();
+        let lerp_speed = 1.0 - (-camera_comp.lerp_factor * ctx.dt()).exp();
 
         let mut desired_position = transform.position.lerp(target_position, lerp_speed);
 

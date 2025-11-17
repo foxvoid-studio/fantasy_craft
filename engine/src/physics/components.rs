@@ -72,7 +72,7 @@ pub enum BodyType {
     Kinematic
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct RigidBody {
     pub body_type: BodyType
 }
@@ -115,7 +115,7 @@ impl ComponentLoader for RigidBodyLoader {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 #[allow(dead_code)]
 pub struct Collider {
     pub shape: SharedShape,
@@ -157,7 +157,7 @@ impl ComponentLoader for ColliderLoader {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Velocity(pub Vec2);
 
 pub struct VelocityLoader;
@@ -173,7 +173,7 @@ impl ComponentLoader for VelocityLoader {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Speed(pub f32);
 
 pub struct SpeedLoader;

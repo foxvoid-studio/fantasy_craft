@@ -1,10 +1,18 @@
-use crate::{gui::systems::text_render_system, prelude::{FontComponentLoader, GameState, GuiBoxLoader, GuiButtonLoader, GuiCheckboxLoader, GuiDraggableLoader, GuiImageLoader, GuiInputFieldLoader, GuiLayoutLoader, GuiLocalOffsetLoader, GuiSliderLoader, HorizontalAlignmentLoader, Plugin, Stage, System, TextDisplayLoader, VerticalAlignmentLoader, button_interaction_system, checkbox_logic_system, checkbox_render_system, draggable_system, gui_box_render_system, gui_resolve_layout_system, gui_image_render_system, input_field_focus_system, input_field_render_system, input_field_typing_system, input_focus_update_system, slider_interaction_system, slider_render_system}};
+use std::collections::HashMap;
+
+use macroquad::math::Vec2;
+
+use crate::{gui::systems::text_render_system, prelude::{FontComponentLoader, GameState, GuiBoxLoader, GuiButtonLoader, GuiCheckboxLoader, GuiDraggableLoader, GuiElementLoader, GuiImageLoader, GuiInputFieldLoader, GuiLayoutLoader, GuiLocalOffsetLoader, GuiSliderLoader, HorizontalAlignmentLoader, Plugin, PreviousMousePosition, Stage, System, TextDisplayLoader, UiResolvedRects, VerticalAlignmentLoader, button_interaction_system, checkbox_logic_system, checkbox_render_system, draggable_system, gui_box_render_system, gui_image_render_system, gui_resolve_layout_system, input_field_focus_system, input_field_render_system, input_field_typing_system, input_focus_update_system, slider_interaction_system, slider_render_system}};
 
 pub struct GuiPlugin;
 
 impl Plugin for GuiPlugin {
     fn build(&self, app: &mut crate::prelude::App) {
+        app.context.insert_resource(UiResolvedRects(HashMap::new()));
+        app.context.insert_resource(PreviousMousePosition(Vec2::ZERO));
+
         app.scene_loader
+            .register("GuiElement", Box::new(GuiElementLoader))
             .register("GuiLayout", Box::new(GuiLayoutLoader))
             .register("GuiLocalOffset", Box::new(GuiLocalOffsetLoader))
             .register("FontComponent", Box::new(FontComponentLoader))

@@ -41,20 +41,14 @@ impl System {
 }
 
 pub struct Schedule {
-    systems: BTreeMap<Stage, Vec<System>>,
-    current_state: GameState
+    systems: BTreeMap<Stage, Vec<System>>
 }
 
 impl Schedule {
-    pub fn new(initial_state: GameState) -> Self {
+    pub fn new() -> Self {
         Self {
-            systems: BTreeMap::new(),
-            current_state: initial_state
+            systems: BTreeMap::new()
         }
-    }
-
-    pub fn set_state(&mut self, new_state: GameState) {
-        self.current_state = new_state;
     }
 
     pub fn add_system(&mut self, stage: Stage, system: System) {
@@ -64,7 +58,7 @@ impl Schedule {
     pub fn run_stage(&self, stage: Stage, ctx: &mut Context) {
         if let Some(systems) = self.systems.get(&stage) {
             for system in systems {
-                if system.is_active(self.current_state) {
+                if system.is_active(ctx.game_state) {
                     (system.func)(ctx);
                 }
             }

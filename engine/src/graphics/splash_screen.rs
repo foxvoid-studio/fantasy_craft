@@ -26,7 +26,9 @@ pub fn setup_splash_screen(ctx: &mut Context) {
     let pos_x = (screen_w / 2.0) - (logo_w / 2.0);
     let pos_y = (screen_h / 2.0) - (logo_h / 2.0);
 
-    let color = if let Some(data) = &ctx.splash_screen_data {
+    let splash_screen_data = ctx.get_resource::<SplashScreenData>();
+
+    let color = if let Some(data) = splash_screen_data {
         data.background_color
     }
     else {
@@ -62,7 +64,7 @@ pub fn setup_splash_screen(ctx: &mut Context) {
 
 pub fn animate_splash_screen(ctx: &mut Context) {
     for (_, (transform, gui_image, anim)) in ctx.world.query::<(&mut Transform, &mut GuiImage, &mut SplashAnimation)>().iter() {
-        anim.timer += ctx.dt;
+        anim.timer += ctx.dt();
 
         if anim.timer < anim.fade_in_time {
             let t = anim.timer / anim.fade_in_time;

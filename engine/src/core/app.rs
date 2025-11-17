@@ -1,15 +1,13 @@
-use std::collections::HashMap;
-
 use hecs::World;
 use macroquad::prelude::*;
 use futures::{FutureExt, future::BoxFuture};
 use crate::core::context::Context;
-use crate::core::focus::InputFocus;
 use crate::core::schedule::{Schedule, Stage};
 use crate::core::asset_server::AssetServer;
 use crate::core::plugins::Plugin;
+use crate::core::time::DeltaTime;
 use crate::graphics::splash_screen::{SplashScreenData, animate_splash_screen, despawn_splash_screen, setup_splash_screen};
-use crate::prelude::{GameState, Spritesheet, System};
+use crate::prelude::{CollisionEvents, PreviousMousePosition, Spritesheet, System};
 use crate::scene::scene_loader::SceneLoader;
 
 pub struct App {
@@ -30,17 +28,11 @@ impl App {
         let asset_server = AssetServer::new();
 
         App {
-            context: Context {
+            context: Context::new(
                 world,
-                asset_server,
-                dt: 0.0,
-                collision_events: Vec::new(),
-                prev_mouse_pos: Vec2::ZERO,
-                input_focus: InputFocus::default(),
-                splash_screen_data: None,
-                ui_resolved_rects: HashMap::new()
-            },
-            schedule: Schedule::new(GameState::Playing),
+                asset_server
+            ),
+            schedule: Schedule::new(),
             scene_loader: SceneLoader::new(),
             window_conf: conf,
             scene_path: None,
@@ -102,7 +94,7 @@ impl App {
                 ),
             );
 
-            self.context.splash_screen_data = Some(SplashScreenData {
+            self.context.insert_resource(SplashScreenData {
                 background_color: self.splash_screen_background_color
             });
 
@@ -128,7 +120,8 @@ impl App {
 
             // --- Boucle du splash ---
             loop {
-                self.context.dt = get_frame_time();
+                let dt = self.context.resource_mut::<DeltaTime>();
+                dt.0 = get_frame_time();
                 clear_background(self.splash_screen_background_color);
 
                 // Animation + rendu
@@ -187,7 +180,8 @@ impl App {
         self.schedule.run_stage(Stage::StartUp, &mut self.context);
 
         loop {
-            self.context.dt = get_frame_time();
+            let dt = self.context.resource_mut::<DeltaTime>();
+            dt.0 = get_frame_time();
             clear_background(LIGHTGRAY);
 
             self.schedule.run_stage(Stage::Update, &mut self.context);
@@ -198,8 +192,13 @@ impl App {
             set_default_camera();
             self.schedule.run_stage(Stage::GuiRender, &mut self.context);
 
-            self.context.collision_events.clear();
-            self.context.prev_mouse_pos = mouse_position().into();
+            if let Some(collision_events) = self.context.get_resource_mut::<CollisionEvents>() {
+                collision_events.0.clear();
+            }
+
+            if let Some(prev_mouse_pos) = self.context.get_resource_mut::<PreviousMousePosition>() {
+                prev_mouse_pos.0 = mouse_position().into();
+            }
 
             next_frame().await;
         }

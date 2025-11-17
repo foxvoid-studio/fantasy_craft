@@ -1,6 +1,6 @@
 use engine::prelude::*;
 
-use crate::{components::{AnimationPrefixLoader, BehaviorComponentLoader, NpcTagLoader, PlayerTagLoader}, systems::{check_player_npc_collision, npc_behavior_system, player_update}};
+use crate::{components::{AnimationPrefixLoader, BehaviorComponentLoader, MainMenuLoader, NpcTagLoader, PlayerTagLoader, QuitButtonLoader}, systems::{check_player_npc_collision, npc_behavior_system, player_update, quit_button_system, toggle_main_menu_system}};
 
 pub struct PlayerPlugin;
 
@@ -10,12 +10,22 @@ impl Plugin for PlayerPlugin {
             .register("BehaviorComponent", Box::new(BehaviorComponentLoader))
             .register("PlayerTag", Box::new(PlayerTagLoader))
             .register("AnimationPrefix", Box::new(AnimationPrefixLoader))
-            .register("NpcTag", Box::new(NpcTagLoader));
+            .register("NpcTag", Box::new(NpcTagLoader))
+            .register("QuitButton", Box::new(QuitButtonLoader))
+            .register("MainMenu", Box::new(MainMenuLoader));
 
         app
             .add_system(Stage::Update, System::new(
                 player_update,
                 vec![GameState::Playing]
+            ))
+            .add_system(Stage::Update, System::new(
+                quit_button_system,
+                vec![GameState::Menu]
+            ))
+            .add_system(Stage::Update, System::new(
+                toggle_main_menu_system,
+                vec![GameState::Playing, GameState::Menu]
             ))
             .add_system(Stage::PostUpdate, System::new(
                 check_player_npc_collision,

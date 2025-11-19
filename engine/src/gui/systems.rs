@@ -3,7 +3,7 @@ use std::collections::{HashMap, HashSet};
 use hecs::Entity;
 use macroquad::prelude::*;
 use crate::core::context::Context; use crate::core::event::EventBus;
-use crate::core::focus::InputFocus;
+use crate::input::focus::InputFocus;
 // Your refactored context
 use crate::gui::components::{TextDisplay, GuiBox};
 use crate::gui::event::UiClickEvent;
@@ -229,7 +229,6 @@ pub fn button_interaction_system(ctx: &mut Context) {
                                 action_id: action.action_id.clone(),
                                 entity,
                             });
-                            println!("Button clicked! Action: {}", action.action_id);
                         }
                     } else {
                         button.state = ButtonState::Idle;

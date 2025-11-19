@@ -1,0 +1,7 @@
+{
+    "MoveUp": ["Z", "Up"],
+    "MoveDown": ["S", "Down"],
+    "MoveLeft": ["Q", "Left"],
+    "MoveRight": ["D", "Right"],
+    "Menu": ["Escape"]
+}

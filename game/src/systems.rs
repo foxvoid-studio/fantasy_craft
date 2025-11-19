@@ -2,7 +2,7 @@ use std::process::exit;
 
 use hecs::Entity;
 use macroquad::prelude::*;
-use engine::{audio::event::PlaySoundEvent, core::{event::EventBus, focus::InputFocus}, gui::{components::TextDisplay, event::UiClickEvent}, prelude::*};
+use engine::{audio::event::PlaySoundEvent, core::event::EventBus, gui::{components::TextDisplay, event::UiClickEvent}, input::{focus::InputFocus, manager::InputManager}, prelude::*};
 use ::rand::{seq::IteratorRandom, thread_rng, Rng};
 use crate::components::{AnimationPrefix, Behavior, BehaviorComponent, FpsDisplay, MainMenu, NpcTag, PlayerTag};
 
@@ -59,6 +59,11 @@ pub fn player_update(ctx: &mut Context) {
         .map(|(entity, _)| entity)
         .collect();
 
+    let (_world, resources) = (&mut ctx.world, &ctx.resources);
+
+    // 4. On récupère l'InputManager depuis 'resources' (pas depuis ctx)
+    let input = resources.get::<InputManager>().expect("InputManager missing");
+
     for entity in player_entities {
         let (velocity, state, direction) = 
             if let Ok(data) = ctx.world.query_one_mut::<(&mut Velocity, &mut StateComponent, &mut DirectionComponent)>(entity) {
@@ -71,24 +76,24 @@ pub fn player_update(ctx: &mut Context) {
         let mut moving = false;
         
         if !input_is_captured {
-            if is_key_down(KeyCode::Right) || is_key_down(KeyCode::D) { 
+            if input.is_action_down("MoveRight") { 
                 velocity.0.x = 1.0; 
                 direction.0 = Direction::Right;
                 moving = true;
             }
-            if is_key_down(KeyCode::Left) || is_key_down(KeyCode::Q) { 
+            if input.is_action_down("MoveLeft") { 
                 velocity.0.x = -1.0; 
                 direction.0 = Direction::Left;
                 moving = true;
             }
-            if is_key_down(KeyCode::Up) || is_key_down(KeyCode::Z) { 
+            if input.is_action_down("MoveUp") { 
                 velocity.0.y = -1.0; 
                 if !is_key_down(KeyCode::Right) && !is_key_down(KeyCode::Left) {
                     direction.0 = Direction::Up;
                 }
                 moving = true;
             }
-            if is_key_down(KeyCode::Down) || is_key_down(KeyCode::S) { 
+            if input.is_action_down("MoveDown") { 
                 velocity.0.y = 1.0; 
                 if !is_key_down(KeyCode::Right) && !is_key_down(KeyCode::Left) {
                     direction.0 = Direction::Down;
@@ -195,7 +200,9 @@ pub fn menu_buttons_system(ctx: &mut Context) {
 }
 
 pub fn toggle_main_menu_system(ctx: &mut Context) {
-    if is_key_pressed(KeyCode::Escape) {
+    let input = ctx.resource::<InputManager>();
+
+    if input.is_action_just_pressed("Menu") {
         for (_, (_main_menu, visible)) in ctx.world.query::<(&MainMenu, &mut Visible)>().iter() {
             visible.0 = !visible.0;
 

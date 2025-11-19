@@ -8,3 +8,4 @@ pub mod gui;
 pub mod hierarchy;
 pub mod scene;
 pub mod audio;
+pub mod input;

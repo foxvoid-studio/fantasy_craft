@@ -8,6 +8,7 @@ use crate::core::asset_server::AssetServer;
 use crate::core::plugins::Plugin;
 use crate::core::time::DeltaTime;
 use crate::graphics::splash_screen::{SplashScreenData, animate_splash_screen, despawn_splash_screen, setup_splash_screen};
+use crate::input::manager::InputManager;
 use crate::prelude::{PreviousMousePosition, Spritesheet, System};
 use crate::scene::scene_loader::SceneLoader;
 
@@ -20,7 +21,8 @@ pub struct App {
     pub assets_file: Option<String>,
     show_splash_screen: bool,
     splash_screen_logo: String,
-    splash_screen_background_color: Color
+    splash_screen_background_color: Color,
+    binding_path: Option<String>
 }
 
 impl App {
@@ -40,7 +42,8 @@ impl App {
             show_splash_screen: true,
             assets_file: None,
             splash_screen_logo: "resources/textures/logo_engine.png".to_string(),
-            splash_screen_background_color: Color::new(1.0, 0.980392157, 0.960784314, 1.0)
+            splash_screen_background_color: Color::new(1.0, 0.980392157, 0.960784314, 1.0),
+            binding_path: None
         }
     }
 
@@ -66,6 +69,11 @@ impl App {
 
     pub fn with_assets_file(&mut self, file_path: String) -> &mut Self {
         self.assets_file = Some(file_path);
+        self
+    }
+
+    pub fn with_binding_file(&mut self, file_path: String) -> &mut Self {
+        self.binding_path = Some(file_path);
         self
     }
 
@@ -175,6 +183,12 @@ impl App {
 
         if let Some(scene_path) = self.scene_path {
             self.scene_loader.load_scene_from_file(&scene_path, &mut self.context).await.unwrap();
+        }
+
+        if let Some(binding_path) = self.binding_path {
+            if let Some(input_manager) = self.context.get_resource_mut::<InputManager>() {
+                input_manager.load_from_file(&binding_path);
+            }
         }
 
         // --- Démarrage du jeu ---

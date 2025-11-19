@@ -1,11 +1,9 @@
-use crate::{core::plugins::Plugin, physics::systems::physics_system, prelude::{ColliderLoader, CollisionEvents, GameState, RigidBodyLoader, SpeedLoader, Stage, System, TransformLoader, VelocityLoader, movement_system}};
+use crate::{core::plugins::Plugin, physics::systems::physics_system, prelude::{ColliderLoader, GameState, RigidBodyLoader, SpeedLoader, Stage, System, TransformLoader, VelocityLoader, movement_system}};
 
 pub struct PhysicsPlugin;
 
 impl Plugin for PhysicsPlugin {
     fn build(&self, app: &mut crate::prelude::App) {
-        app.context.insert_resource(CollisionEvents(Vec::new()));
-
         app.scene_loader
             .register("Transform", Box::new(TransformLoader))
             .register("RigidBody", Box::new(RigidBodyLoader))

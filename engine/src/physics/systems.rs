@@ -2,11 +2,12 @@ use hecs::Entity;
 use macroquad::prelude::*;
 use parry2d::query;
 
+use crate::core::event::EventBus;
 use crate::physics::components::Transform;
 use crate::core::context::Context;
 use crate::physics::components::{BodyType, Collider, RigidBody, Velocity, Speed};
 use crate::physics::helpers::make_isometry;
-use crate::prelude::{CollisionEvent, CollisionEvents};
+use crate::prelude::CollisionEvent;
 
 pub fn movement_system(ctx: &mut Context) {
     // Obtenez dt AVANT la boucle
@@ -24,65 +25,59 @@ pub fn movement_system(ctx: &mut Context) {
 
 pub fn physics_system(ctx: &mut Context) {
     
-    // --- Phase 1: Préparation et "Emprunts Disjoints" ---
+    // --- Phase 1: Preparation & Disjoint Borrows ---
     
-    // Obtenez dt UNE SEULE FOIS.
     let dt = ctx.dt(); 
     
-    // Séparez ctx en ses deux parties pour que le compilateur comprenne
-    // que 'world' et 'resources' sont indépendants.
+    // Split context to access world and resources separately
     let (world, resources) = (&mut ctx.world, &mut ctx.resources);
 
-    // Obtenez les événements. Emprunte 'resources' SEULEMENT.
-    let collision_events = &mut resources.get_mut::<CollisionEvents>()
-        .expect("La ressource CollisionEvents est manquante")
-        .0;
+    // Get the EventBus
+    let event_bus = resources.get_mut::<EventBus>()
+        .expect("EventBus resource is missing");
 
-    // --- Phase 2: Collecte (Lecture seule de 'world') ---
+    // --- Phase 2: Collect (Read Only from World) ---
     
-    // Ce Vec contiendra des DONNÉES POSSÉDÉES (clonées), pas des références.
-    // Notez : plus de &mut RigidBody !
     let mut entities: Vec<(Entity, Vec2, RigidBody, Velocity, Collider)> = Vec::new();
 
-    for (entity, (transform, rigidbody, velocity, collider)) in world.query::<(&Transform, &RigidBody, &Velocity, &Collider)>().iter() {
-        // CLONEZ les données. C'est la correction principale.
+    // Query and Clone (this releases the world borrow immediately after the loop)
+    for (entity, (transform, rigidbody, velocity, collider)) in 
+        world.query::<(&Transform, &RigidBody, &Velocity, &Collider)>().iter() 
+    {
         entities.push((
             entity,
-            transform.position, // Vec2 est Copy
-            rigidbody.clone(),  // Nécessite #[derive(Clone)]
-            velocity.clone(),   // Nécessite #[derive(Clone)] (ou Copy)
-            collider.clone()    // Nécessite #[derive(Clone)]
+            transform.position,
+            rigidbody.clone(), 
+            velocity.clone(),  
+            collider.clone()   
         ));
     }
-    // L'emprunt de 'query' sur 'world' est libéré EXACTEMENT ICI.
-    // 'world' est maintenant 100% libre.
-
     
-    // --- Phase 3: Simulation (sur le Vec local) ---
+    // --- Phase 3: Simulation ---
     
-    // Étape 1: Intégration du mouvement
+    // Step 1: Integration
     for (_, position, rb, velocity, _) in entities.iter_mut() {
         if let BodyType::Dynamic = rb.body_type {
-            *position += velocity.0 * dt; // Utilisez la variable dt locale
+            *position += velocity.0 * dt;
         }
     }
 
-    // Étape 2: Résolution des collisions (votre boucle 'split_at_mut' est une bonne approche)
+    // Step 2: Collision Resolution
     let mut i = 0;
     while i < entities.len() {
         let (left, right) = entities.split_at_mut(i + 1);
-        let entity_a = &mut left[i]; // 'A'
+        let entity_a = &mut left[i];
         
-        for entity_b in right.iter_mut() { // 'B'
+        for entity_b in right.iter_mut() {
             
-            let iso_a = make_isometry(entity_a.1); // .1 = position
+            let iso_a = make_isometry(entity_a.1);
             let iso_b = make_isometry(entity_b.1);
 
-            if let Ok(Some(contact)) = query::contact(&iso_a, &*entity_a.4.shape, &iso_b, &*entity_b.4.shape, 0.0) { // .4 = collider
+            if let Ok(Some(contact)) = query::contact(&iso_a, &*entity_a.4.shape, &iso_b, &*entity_b.4.shape, 0.0) {
                 let normal_vector = contact.normal1.into_inner();
                 let half_correction = normal_vector * contact.dist * 0.5;
 
-                // .2 = rigidbody
+                // Physics Response (Pushing objects apart)
                 if matches!(entity_a.2.body_type, BodyType::Dynamic) && matches!(entity_b.2.body_type, BodyType::Static) {
                     let correction = normal_vector * contact.dist;
                     entity_a.1 += vec2(correction.x, correction.y); 
@@ -96,20 +91,19 @@ pub fn physics_system(ctx: &mut Context) {
                     entity_b.1 -= vec2(half_correction.x, half_correction.y);
                 }
 
-                // C'est OK, 'collision_events' n'emprunte que 'resources'
-                collision_events.push(CollisionEvent {
-                    entity_a: entity_a.0, // .0 = entity
+                // --- NEW: Send Event via EventBus ---
+                // We use the disjoint borrow 'event_bus' here.
+                event_bus.send(CollisionEvent {
+                    entity_a: entity_a.0,
                     entity_b: entity_b.0
                 });
             }
         }
         i += 1;
     }
-    // L'emprunt de 'collision_events' sur 'resources' se termine ici.
 
-    // --- Phase 4: Écriture (dans 'world') ---
+    // --- Phase 4: Write Back ---
     
-    // 'world' est libre, nous pouvons maintenant le ré-emprunter sans crainte.
     for (entity, new_pos, _, _, _) in entities {
         if let Ok(mut transform) = world.get::<&mut Transform>(entity) {
             transform.position = new_pos;

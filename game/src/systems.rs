@@ -2,7 +2,7 @@ use std::process::exit;
 
 use hecs::Entity;
 use macroquad::prelude::*;
-use engine::{core::focus::InputFocus, gui::components::TextDisplay, prelude::*};
+use engine::{core::{event::EventBus, focus::InputFocus}, gui::components::TextDisplay, prelude::*};
 use ::rand::{seq::IteratorRandom, thread_rng, Rng};
 use crate::components::{AnimationPrefix, Behavior, BehaviorComponent, FpsDisplay, MainMenu, NpcTag, PlayerTag, QuitButton};
 
@@ -125,16 +125,23 @@ pub fn fps_display_update(ctx: &mut Context) {
 }
 
 pub fn check_player_npc_collision(ctx: &mut Context) {
-    for event in ctx.resource::<CollisionEvents>().0.iter() {
+    // 1. Access the EventBus resource
+    let event_bus = ctx.resource::<EventBus>();
+
+    // 2. Read specific events using the generic read method.
+    // This returns an iterator over &CollisionEvent.
+    for event in event_bus.read::<CollisionEvent>() {
         let e_a = event.entity_a;
         let e_b = event.entity_b;
 
+        // We check component existence using .get().is_ok()
         let a_is_player = ctx.world.get::<&PlayerTag>(e_a).is_ok();
         let b_is_player = ctx.world.get::<&PlayerTag>(e_b).is_ok();
 
         let a_is_npc = ctx.world.get::<&NpcTag>(e_a).is_ok();
         let b_is_npc = ctx.world.get::<&NpcTag>(e_b).is_ok();
 
+        // Respond to specific collision pairs
         if a_is_player && b_is_npc {
             println!("💥 Collision détectée ! Joueur ({:?}) a touché PNJ ({:?})", e_a, e_b);
         }

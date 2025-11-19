@@ -2,12 +2,13 @@ use hecs::World;
 use macroquad::prelude::*;
 use futures::{FutureExt, future::BoxFuture};
 use crate::core::context::Context;
+use crate::core::event::EventBus;
 use crate::core::schedule::{Schedule, Stage};
 use crate::core::asset_server::AssetServer;
 use crate::core::plugins::Plugin;
 use crate::core::time::DeltaTime;
 use crate::graphics::splash_screen::{SplashScreenData, animate_splash_screen, despawn_splash_screen, setup_splash_screen};
-use crate::prelude::{CollisionEvents, PreviousMousePosition, Spritesheet, System};
+use crate::prelude::{PreviousMousePosition, Spritesheet, System};
 use crate::scene::scene_loader::SceneLoader;
 
 pub struct App {
@@ -192,8 +193,8 @@ impl App {
             set_default_camera();
             self.schedule.run_stage(Stage::GuiRender, &mut self.context);
 
-            if let Some(collision_events) = self.context.get_resource_mut::<CollisionEvents>() {
-                collision_events.0.clear();
+            if let Some(event_bus) = self.context.get_resource_mut::<EventBus>() {
+                event_bus.clear();
             }
 
             if let Some(prev_mouse_pos) = self.context.get_resource_mut::<PreviousMousePosition>() {

@@ -2,9 +2,9 @@ use std::process::exit;
 
 use hecs::Entity;
 use macroquad::prelude::*;
-use engine::{core::{event::EventBus, focus::InputFocus}, gui::components::TextDisplay, prelude::*};
+use engine::{core::{event::EventBus, focus::InputFocus}, gui::{components::TextDisplay, event::UiClickEvent}, prelude::*};
 use ::rand::{seq::IteratorRandom, thread_rng, Rng};
-use crate::components::{AnimationPrefix, Behavior, BehaviorComponent, FpsDisplay, MainMenu, NpcTag, PlayerTag, QuitButton};
+use crate::components::{AnimationPrefix, Behavior, BehaviorComponent, FpsDisplay, MainMenu, NpcTag, PlayerTag};
 
 pub fn npc_behavior_system(ctx: &mut Context) {
     for (_, (transform, npc, behavior, state, direction, speed, animation_comp)) in ctx.world.query::<(&mut Transform, &mut NpcTag, &BehaviorComponent, &mut StateComponent, &mut DirectionComponent, &Speed, &mut AnimationComponent)>().iter() {
@@ -151,12 +151,16 @@ pub fn check_player_npc_collision(ctx: &mut Context) {
     }
 }
 
-pub fn quit_button_system(ctx: &mut Context) {
-    let mut query = ctx.world.query::<(&mut GuiButton, &QuitButton)>();
+pub fn menu_buttons_system(ctx: &mut Context) {
+    let event_bus = ctx.resource::<EventBus>();
 
-    for (_, (button, _quit)) in query.iter() {
-        if button.just_clicked {
-            exit(0);
+    for event in event_bus.read::<UiClickEvent>() {
+        match event.action_id.as_str() {
+            "quit_game" => {
+                println!("Bye Fantasy Craft");
+                exit(0);
+            },
+            _ => println!("Unknown action : {}", event.action_id)
         }
     }
 }

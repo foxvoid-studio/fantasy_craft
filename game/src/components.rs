@@ -129,17 +129,6 @@ impl ComponentLoader for FpsDisplayLoader {
 }
 
 #[derive(Debug, Default)]
-pub struct QuitButton;
-
-pub struct QuitButtonLoader;
-
-impl ComponentLoader for QuitButtonLoader {
-    fn load(&self, ctx: &mut engine::prelude::Context, entity: hecs::Entity, _data: &serde_json::Value) {
-        ctx.world.insert_one(entity, QuitButton).expect("Failed to insert QuitButton");
-    }
-}
-
-#[derive(Debug, Default)]
 pub struct MainMenu;
 
 pub struct MainMenuLoader;

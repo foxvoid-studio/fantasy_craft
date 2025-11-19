@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use macroquad::math::Vec2;
 
-use crate::{gui::systems::text_render_system, prelude::{FontComponentLoader, GameState, GuiBoxLoader, GuiButtonLoader, GuiCheckboxLoader, GuiDraggableLoader, GuiElementLoader, GuiImageLoader, GuiInputFieldLoader, GuiLayoutLoader, GuiLocalOffsetLoader, GuiSliderLoader, HorizontalAlignmentLoader, Plugin, PreviousMousePosition, Stage, System, TextDisplayLoader, UiResolvedRects, VerticalAlignmentLoader, button_interaction_system, checkbox_logic_system, checkbox_render_system, draggable_system, gui_box_render_system, gui_image_render_system, gui_resolve_layout_system, input_field_focus_system, input_field_render_system, input_field_typing_system, input_focus_update_system, slider_interaction_system, slider_render_system}};
+use crate::{gui::systems::text_render_system, prelude::{FontComponentLoader, GameState, GuiActionLoader, GuiBoxLoader, GuiButtonLoader, GuiCheckboxLoader, GuiDraggableLoader, GuiElementLoader, GuiImageLoader, GuiInputFieldLoader, GuiLayoutLoader, GuiLocalOffsetLoader, GuiSliderLoader, HorizontalAlignmentLoader, Plugin, PreviousMousePosition, Stage, System, TextDisplayLoader, UiResolvedRects, VerticalAlignmentLoader, button_interaction_system, checkbox_logic_system, checkbox_render_system, draggable_system, gui_box_render_system, gui_image_render_system, gui_resolve_layout_system, input_field_focus_system, input_field_render_system, input_field_typing_system, input_focus_update_system, slider_interaction_system, slider_render_system}};
 
 pub struct GuiPlugin;
 
@@ -25,7 +25,8 @@ impl Plugin for GuiPlugin {
             .register("GuiSlider", Box::new(GuiSliderLoader))
             .register("GuiCheckbox", Box::new(GuiCheckboxLoader))
             .register("GuiInputField", Box::new(GuiInputFieldLoader))
-            .register("GuiImage", Box::new(GuiImageLoader));
+            .register("GuiImage", Box::new(GuiImageLoader))
+            .register("GuiAction", Box::new(GuiActionLoader));
 
         app
             .add_system(Stage::Update, System::new(

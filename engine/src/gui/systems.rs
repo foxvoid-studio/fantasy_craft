@@ -2,12 +2,14 @@
 use std::collections::{HashMap, HashSet};
 use hecs::Entity;
 use macroquad::prelude::*;
-use crate::core::context::Context; use crate::core::focus::InputFocus;
+use crate::core::context::Context; use crate::core::event::EventBus;
+use crate::core::focus::InputFocus;
 // Your refactored context
 use crate::gui::components::{TextDisplay, GuiBox};
+use crate::gui::event::UiClickEvent;
 use crate::physics::components::Transform;
 use crate::prelude::{
-    ButtonState, FontComponent, GuiButton, GuiCheckbox, GuiDraggable, GuiElement, GuiImage, GuiInputField, GuiLayout, GuiLocalOffset, GuiSlider, HorizontalAlignment, HorizontalAlignmentType, Parent, VerticalAlignment, VerticalAlignmentType, Visible
+    ButtonState, FontComponent, GuiAction, GuiButton, GuiCheckbox, GuiDraggable, GuiElement, GuiImage, GuiInputField, GuiLayout, GuiLocalOffset, GuiSlider, HorizontalAlignment, HorizontalAlignmentType, Parent, VerticalAlignment, VerticalAlignmentType, Visible
 };
 
 // --- RESOURCE WRAPPER STRUCT ---
@@ -142,18 +144,28 @@ pub fn button_interaction_system(ctx: &mut Context) {
     let is_pressed = is_mouse_button_down(MouseButton::Left);
     let just_clicked = is_mouse_button_pressed(MouseButton::Left);
 
-    // --- MODIFIED: Get map once ---
-    let resolved_rects_map = &ctx.resource::<UiResolvedRects>().0;
+    let (world, resources) = (&mut ctx.world, &mut ctx.resources);
 
-    let mut query = ctx.world.query::<(
+    // --- READ PHASE ---
+    // We get the read-only resource first.
+    let resolved_rects_map = &resources.get::<UiResolvedRects>()
+        .expect("UiResolvedRects resource is missing")
+        .0;
+
+    // We create a local buffer to store events because we can't 
+    // borrow EventBus mutably while holding resolved_rects_map.
+    let mut events_to_send: Vec<UiClickEvent> = Vec::new();
+
+    let mut query = world.query::<(
         &mut GuiButton, 
         &GuiBox, 
+        Option<&GuiAction>, 
         Option<&Visible>, 
         Option<&HorizontalAlignment>, 
         Option<&VerticalAlignment>
     )>();
 
-    for (entity, (button, gui_box, visibility, h_align, v_align)) in query.iter() {
+    for (entity, (button, gui_box, action_opt, visibility, h_align, v_align)) in query.iter() {
         let is_visible = visibility.map_or(true, |v| v.0);
 
         if !is_visible {
@@ -162,12 +174,12 @@ pub fn button_interaction_system(ctx: &mut Context) {
 
         button.just_clicked = false;
 
-        // --- MODIFIED ---
+        // We use the read-only map here
         let (resolved_pos, resolved_size) = 
             if let Some(rect) = resolved_rects_map.get(&entity) {
                 *rect
             } else {
-                continue; // Not processed by layout system
+                continue; 
             };
 
         if !gui_box.screen_space { continue; }
@@ -177,10 +189,10 @@ pub fn button_interaction_system(ctx: &mut Context) {
         let w = resolved_size.x;
         let h = resolved_size.y;
 
-        // (Alignment logic is correct)
+        // Apply alignment
         if let Some(h_align) = h_align {
             match h_align.0 {
-                HorizontalAlignmentType::Left => { /* Comportement par défaut */ }
+                HorizontalAlignmentType::Left => {},
                 HorizontalAlignmentType::Center => x -= w / 2.0,
                 HorizontalAlignmentType::Right => x -= w,
             }
@@ -188,7 +200,7 @@ pub fn button_interaction_system(ctx: &mut Context) {
         
         if let Some(v_align) = v_align {
             match v_align.0 {
-                VerticalAlignmentType::Top => { /* Comportement par défaut */ }
+                VerticalAlignmentType::Top => {},
                 VerticalAlignmentType::Center => y -= h / 2.0,
                 VerticalAlignmentType::Bottom => y -= h,
             }
@@ -196,32 +208,47 @@ pub fn button_interaction_system(ctx: &mut Context) {
 
         let is_hovered = mouse_x >= x && mouse_x <= (x + w) && mouse_y >= y && mouse_y <= (y + h);
 
-        // (Button state logic is correct)
         match button.state {
             ButtonState::Idle => {
-                if is_hovered {
-                    button.state = ButtonState::Hovered;
-                }
+                if is_hovered { button.state = ButtonState::Hovered; }
             }
             ButtonState::Hovered => {
-                if !is_hovered {
-                    button.state = ButtonState::Idle;
-                }
-                else if just_clicked {
-                    button.state = ButtonState::Pressed;
-                }
+                if !is_hovered { button.state = ButtonState::Idle; }
+                else if just_clicked { button.state = ButtonState::Pressed; }
             }
             ButtonState::Pressed => {
                 if !is_pressed {
                     if is_hovered {
                         button.just_clicked = true;
                         button.state = ButtonState::Hovered;
-                    }
-                    else {
+
+                        // --- COLLECT PHASE ---
+                        // Instead of sending immediately, we push to the buffer.
+                        if let Some(action) = action_opt {
+                            events_to_send.push(UiClickEvent {
+                                action_id: action.action_id.clone(),
+                                entity,
+                            });
+                            println!("Button clicked! Action: {}", action.action_id);
+                        }
+                    } else {
                         button.state = ButtonState::Idle;
                     }
                 }
             }
+        }
+    }
+
+    // --- SEND PHASE ---
+    // The loop is done, so `resolved_rects_map` borrow is dropped (or can be inferred dropped).
+    // We are now free to borrow `resources` mutably to get the EventBus.
+    
+    if !events_to_send.is_empty() {
+        let event_bus = resources.get_mut::<EventBus>()
+            .expect("EventBus resource is missing");
+
+        for event in events_to_send {
+            event_bus.send(event);
         }
     }
 }

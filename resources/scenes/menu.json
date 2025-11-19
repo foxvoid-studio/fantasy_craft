@@ -128,7 +128,9 @@
                         "a": 1.0
                     }
                 },
-                "QuitButton": {}
+                "GuiAction": {
+                    "action_id": "quit_game"
+                }
             }
         },
         {

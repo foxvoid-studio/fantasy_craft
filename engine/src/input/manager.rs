@@ -1,4 +1,5 @@
-use std::{collections::HashMap, fs};
+use std::collections::HashMap;
+// We remove std::fs because it is not supported in WASM
 use macroquad::prelude::*;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -24,14 +25,18 @@ impl InputManager {
             .push(input);
     }
 
-    /// Loads bindings from a JSON file.
-    /// Expected format: { "ActionName": ["KeyName", "MouseName"], ... }
-    pub fn load_from_file(&mut self, path: &str) {
-        let content = fs::read_to_string(path)
-            .expect(&format!("Failed to read bindings file: {}", path));
-
-        let json_bindings: HashMap<String, Vec<String>> = serde_json::from_str(&content)
-            .expect("Failed to parse bindings JSON");
+    /// Loads bindings from a JSON string content.
+    /// This method is platform-agnostic (works on PC and Web).
+    /// The file reading must be done by the caller (App.rs) using load_string().
+    pub fn load_from_string(&mut self, json_content: &str) {
+        // We use match to handle errors gracefully without crashing the game
+        let json_bindings: HashMap<String, Vec<String>> = match serde_json::from_str(json_content) {
+            Ok(data) => data,
+            Err(e) => {
+                error!("InputManager: Failed to parse bindings JSON. Error: {}", e);
+                return;
+            }
+        };
 
         for (action, inputs) in json_bindings {
             for input_str in inputs {
@@ -39,12 +44,13 @@ impl InputManager {
                     self.bind(&action, variant)
                 }
                 else {
-                    eprintln!("Warning: Unknown input key '{}' for action '{}'", input_str, action);
+                    // Use error!/warn! macro for better logging in WASM console
+                    warn!("InputManager: Unknown input key '{}' for action '{}'", input_str, action);
                 }
             }
         }
 
-        println!("Input bindings loaded from {}", path);
+        info!("InputManager: Bindings loaded successfully.");
     }
 
     pub fn is_action_down(&self, action: &str) -> bool {
@@ -78,7 +84,7 @@ impl InputManager {
             "MouseRight" => Some(InputVariant::Mouse(MouseButton::Right)),
             "MouseMiddle" => Some(InputVariant::Mouse(MouseButton::Middle)),
             
-            // Common Keys (Add more as needed)
+            // Common Keys
             "Space" => Some(InputVariant::Key(KeyCode::Space)),
             "Escape" => Some(InputVariant::Key(KeyCode::Escape)),
             "Enter" => Some(InputVariant::Key(KeyCode::Enter)),

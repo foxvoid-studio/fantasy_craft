@@ -8,7 +8,8 @@ use crate::scene::scene_loader::ComponentLoader;
 #[derive(Debug)]
 pub struct CameraComponent {
     pub lerp_factor: f32,
-    pub zoom: f32
+    pub zoom: f32,
+    pub camera: Camera2D
 }
 
 fn default_lerp() -> f32 { 0.0 }
@@ -32,7 +33,8 @@ impl ComponentLoader for CameraComponentLoader {
 
         let component = CameraComponent {
             lerp_factor: loader_data.lerp_factor,
-            zoom: loader_data.zoom
+            zoom: loader_data.zoom,
+            camera: Camera2D::default()
         };
 
         ctx.world.insert_one(entity, component).expect("Failed to insert CameraComponent");

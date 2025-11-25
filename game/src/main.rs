@@ -1,4 +1,19 @@
 use macroquad::prelude::*;
+
+// We need to register the custom getrandom handler to satisfy the dependency
+// without pulling in wasm-bindgen JS glue code.
+fn custom_getrandom(buf: &mut [u8]) -> Result<(), getrandom::Error> {
+    for b in buf.iter_mut() {
+        // Macroquad's rand::rand() returns a u32, we cast it to u8.
+        // Note: This is a pseudo-RNG, usually sufficient for games but not for cryptography.
+        *b = macroquad::rand::rand() as u8;
+    }
+    Ok(())
+}
+
+// This macro registers our function as the source of randomness for the whole compilation unit.
+getrandom::register_custom_getrandom!(custom_getrandom);
+
 use engine::prelude::*;
 
 mod components;

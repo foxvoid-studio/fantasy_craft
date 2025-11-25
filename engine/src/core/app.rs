@@ -7,6 +7,7 @@ use crate::core::schedule::{Schedule, Stage};
 use crate::core::asset_server::AssetServer;
 use crate::core::plugins::Plugin;
 use crate::core::time::DeltaTime;
+use crate::core::web_context::WebContext;
 use crate::graphics::splash_screen::{SplashScreenData, animate_splash_screen, despawn_splash_screen, setup_splash_screen};
 use crate::input::manager::InputManager;
 use crate::prelude::{Spritesheet, System};
@@ -88,17 +89,46 @@ impl App {
         self
     }
 
+    fn resolve_path(base: &str, path: &str) -> String {
+        if path.starts_with("http") {
+            return path.to_string();
+        }
+        format!("{}{}", base, path)
+    }
+
     pub async fn run(mut self) {
+        // 1. Fetch the Base URL from JavaScript
+        let base_url = WebContext::get_base_url();
+        info!("App: Resolved Base URL: {}", base_url);
+
+        // 2. Resolve paths using the base URL
+        let resolved_splash_path = Self::resolve_path(&base_url, &self.splash_screen_logo);
+        
+        // Resolve optional paths
+        let resolved_assets_file = self.assets_file.as_ref().map(|p| Self::resolve_path(&base_url, p));
+        let resolved_scene_path = self.scene_path.as_ref().map(|p| Self::resolve_path(&base_url, p));
+        let resolved_binding_path = self.binding_path.as_ref().map(|p| Self::resolve_path(&base_url, p));
+
         const SPLASH_MIN_DURATION: f64 = 3.0;
 
         let mut maybe_asset_server: Option<AssetServer> = None;
 
         if self.show_splash_screen {
+            let splash_texture = match load_texture(&resolved_splash_path).await {
+                Ok(tex) => tex,
+                Err(e) => {
+                    error!("Failed to load splash logo at: {}. Error: {}", resolved_splash_path, e);
+                    // Generate a 1x1 Magenta texture as fallback
+                    let img = Image::gen_image_color(1, 1, MAGENTA);
+                    Texture2D::from_image(&img)
+                }
+            };
+
             // --- Splash setup ---
             self.context.asset_server.add_spritesheet(
                 "splash_screen_logo".to_string(),
                 Spritesheet::new(
-                    load_texture(&self.splash_screen_logo).await.unwrap(),
+                    splash_texture,
                     1024.0,
                     1024.0,
                 ),
@@ -114,7 +144,7 @@ impl App {
             // --- Création d'une future pour le chargement ---
             let mut loading_asset_server = AssetServer::new();
 
-            let asset_path_for_future = self.assets_file.clone();
+            let asset_path_for_future = resolved_assets_file.clone();
 
             let mut load_future: BoxFuture<'static, (AssetServer, Result<(), Box<dyn std::error::Error>>)> =
                 Box::pin(async move {
@@ -148,7 +178,10 @@ impl App {
 
                 if !assets_loaded {
                     if let Some((loaded_server, result)) = load_future.as_mut().now_or_never() {
-                        result.expect("Failed to load assets from JSON file");
+                        // Log error instead of crashing if assets.json is missing
+                        if let Err(e) = result {
+                             error!("Failed to load assets from JSON file: {}", e);
+                        }
                         maybe_asset_server = Some(loaded_server);
                         assets_loaded = true;
                     }
@@ -161,14 +194,13 @@ impl App {
 
             despawn_splash_screen(&mut self.context);
         } else {
-            // --- Pas de splash : on charge directement les assets ---
+            // --- No splash: Load assets directly ---
             let mut asset_server = AssetServer::new();
 
-            if let Some(path) = &self.assets_file {
-                asset_server
-                    .load_assets_from_file(path)
-                    .await
-                    .expect("Failed to load assets from JSON file");
+            if let Some(path) = &resolved_assets_file {
+                if let Err(e) = asset_server.load_assets_from_file(path).await {
+                     error!("Failed to load assets from JSON file: {}", e);
+                }
             }
 
             maybe_asset_server = Some(asset_server);
@@ -182,13 +214,24 @@ impl App {
 
         self.context.asset_server.prepare_loaded_tiledmap().await;
 
-        if let Some(scene_path) = self.scene_path {
+        if let Some(scene_path) = resolved_scene_path {
             self.scene_loader.load_scene_from_file(&scene_path, &mut self.context).await.unwrap();
         }
 
-        if let Some(binding_path) = self.binding_path {
-            if let Some(input_manager) = self.context.get_resource_mut::<InputManager>() {
-                input_manager.load_from_file(&binding_path);
+        if let Some(binding_path) = resolved_binding_path {
+            info!("App: Loading bindings from: {}", binding_path);
+            
+            // On utilise load_string pour le support WASM/HTTP
+            match load_string(&binding_path).await {
+                Ok(content) => {
+                    if let Some(input_manager) = self.context.get_resource_mut::<InputManager>() {
+                        // On passe le contenu, plus le chemin !
+                        input_manager.load_from_string(&content);
+                    }
+                },
+                Err(e) => {
+                    error!("App: Failed to load binding file '{}': {}", binding_path, e);
+                }
             }
         }
 

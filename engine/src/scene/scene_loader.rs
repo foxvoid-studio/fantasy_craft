@@ -1,14 +1,12 @@
-// In your scene_loader.rs
-
+use macroquad::prelude::*;
 use hecs::Entity;
 use serde_json::Value;
 use std::collections::HashMap;
 use crate::core::context::Context;
 use crate::prelude::Parent;
-// MODIFIED: Import the new SceneFile and SceneEntry
-use crate::scene::scene_format::{SceneFile, SceneEntry}; 
+use crate::scene::scene_format::{SceneFile, SceneEntry};
+// We need to import the Error trait explicitly
 use std::error::Error;
-use std::path::Path;
 use async_recursion::async_recursion;
 
 pub trait ComponentLoader: Send + Sync + 'static {
@@ -31,28 +29,23 @@ impl SceneLoader {
         self
     }
 
-    // This is the main public entry point.
-    // It sets up the maps and calls the internal recursive loader.
+    // Public entry point
     pub async fn load_scene_from_file(&self, path: &str, ctx: &mut Context) -> Result<(), Box<dyn Error>> {
-        
-        // These maps are shared across all recursive calls
-        // to ensure all entities are registered centrally.
         let mut entity_map: HashMap<String, Entity> = HashMap::new();
-        
-        // The parent queue is also collected from all files first.
         let mut parent_queue: Vec<(Entity, String)> = Vec::new();
 
-        // Start the recursive loading process
+        info!("SceneLoader: Starting load from root: {}", path);
+
         self.load_scene_internal(path, ctx, &mut entity_map, &mut parent_queue).await?;
 
-        // After ALL files are loaded and entities spawned,
-        // process the parent relationships.
         self.process_parent_queue(ctx, &entity_map, parent_queue);
 
+        info!("SceneLoader: Loading complete.");
         Ok(())
     }
 
-    // Internal recursive function to load scenes
+    // Internal recursive function
+    // We explicitly cast errors to Box<dyn Error> to satisfy the signature
     #[async_recursion]
     async fn load_scene_internal(
         &self,
@@ -60,72 +53,69 @@ impl SceneLoader {
         ctx: &mut Context,
         entity_map: &mut HashMap<String, Entity>,
         parent_queue: &mut Vec<(Entity, String)>,
-    ) -> Result<(), Box<dyn Error>> {
+    ) -> Result<(), Box<dyn Error>> { // <--- The return type we must strictly adhere to
         
-        // Read and parse the scene file
-        let json_content = std::fs::read_to_string(path)?;
-        let scene_data: SceneFile = serde_json::from_str(&json_content)?;
+        // 1. Load string using Macroquad's HTTP/FS abstraction
+        let json_content = load_string(path)
+            .await
+            .map_err(|e| {
+                error!("SceneLoader: Failed to load file '{}': {}", path, e);
+                // Explicitly box the macroquad error into the trait object
+                Box::new(e) as Box<dyn Error>
+            })?;
 
-        // Get the directory of the current file for resolving relative import paths
-        let current_dir = Path::new(path).parent().unwrap_or(Path::new(""));
+        // 2. Parse JSON
+        let scene_data: SceneFile = serde_json::from_str(&json_content)
+            .map_err(|e| {
+                error!("SceneLoader: Failed to parse JSON in '{}': {}", path, e);
+                // Explicitly box the serde error into the trait object
+                Box::new(e) as Box<dyn Error>
+            })?;
 
-        // Iterate over the entries (which can be Entities or Imports)
+        // 3. Resolve current directory URL-safely
+        let current_dir = if let Some(last_slash_idx) = path.rfind('/') {
+            &path[0..=last_slash_idx]
+        } else {
+            ""
+        };
+
         for entry in scene_data.entities {
             match entry {
-                // Case 1: It's a standard entity definition
                 SceneEntry::Entity(entity_data) => {
                     let entity = ctx.world.spawn(());
                     
-                    // Register the entity in the global map
                     if entity_map.insert(entity_data.id.clone(), entity).is_some() {
-                        println!(
-                            "Warning: Duplicate entity ID found: '{}'. Overwriting.",
-                            entity_data.id
-                        );
+                        warn!("Warning: Duplicate entity ID found: '{}'. Overwriting.", entity_data.id);
                     }
 
-                    // Load components as before
                     for (component_name, component_data) in entity_data.components {
-                        // Handle Parent component special case
                         if component_name == "Parent" {
                             if let Some(target_id) = component_data.as_str() {
-                                // Add to queue; DO NOT process yet
                                 parent_queue.push((entity, target_id.to_string()));
                             } else {
-                                println!(
-                                    "Warning: 'Parent' target for entity {} is not a valid string.",
-                                    entity_data.id
-                                );
+                                warn!("Warning: 'Parent' target for entity {} is invalid.", entity_data.id);
                             }
-                            continue; // Skip normal loading
+                            continue;
                         }
 
-                        // Load other components
                         if let Some(loader) = self.component_loaders.get(&component_name) {
                             loader.load(ctx, entity, &component_data);
                         } else {
-                            println!(
-                                "Warning: No component loader registered for '{}'",
-                                component_name
-                            );
+                            warn!("Warning: No component loader registered for '{}'", component_name);
                         }
                     }
                 }
                 
-                // Case 2: It's an import directive
                 SceneEntry::Import(import_data) => {
-                    // Resolve the relative path
-                    let import_path = current_dir.join(&import_data.import);
-                    let import_path_str = import_path
-                        .to_str()
-                        .ok_or("Failed to convert import path to string")?;
+                    let import_path_str = format!("{}{}", current_dir, import_data.import);
 
-                    println!("Importing scene from: {}", import_path_str);
+                    info!("Importing sub-scene from: {}", import_path_str);
 
-                    // --- RECURSIVE CALL ---
-                    // Call self with the new path, passing the *same* maps.
+                    // 4. Recursive call
+                    // Since the recursive function already returns Result<(), Box<dyn Error>>,
+                    // the ? operator works fine here.
                     self.load_scene_internal(
-                        import_path_str,
+                        &import_path_str,
                         ctx,
                         entity_map,
                         parent_queue,
@@ -137,7 +127,6 @@ impl SceneLoader {
         Ok(())
     }
 
-    // This is called only ONCE after all files are loaded.
     fn process_parent_queue(
         &self,
         ctx: &mut Context,
@@ -146,14 +135,13 @@ impl SceneLoader {
     ) {
         for (entity, parent_id) in parent_queue {
             if let Some(parent_entity) = entity_map.get(&parent_id) {
-                ctx.world
-                    .insert_one(entity, Parent(*parent_entity))
-                    .expect("Failed to add Parent component");
+                if ctx.world.contains(entity) {
+                    ctx.world
+                        .insert_one(entity, Parent(*parent_entity))
+                        .expect("Failed to add Parent component");
+                }
             } else {
-                println!(
-                    "Warning: Parent entity not found with ID '{}' for child entity {:?}",
-                    parent_id, entity
-                );
+                warn!("Warning: Parent entity not found with ID '{}' for child entity {:?}", parent_id, entity);
             }
         }
     }

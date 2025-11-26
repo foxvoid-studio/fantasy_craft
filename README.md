@@ -1,22 +1,16 @@
 # Fantasy Craft
 
-<div align="center">
+> The lightweight, data-oriented Rust game engine built for the Web.
 
 ![Fantasy Craft Banner](https://placehold.co/1200x300/1a1a1a/ff6b00?text=Fantasy+Craft&font=montserrat)
 
-**The lightweight, data-oriented Rust game engine built for the Web.**
-<br>
-Powered by [Macroquad](https://github.com/not-fl3/macroquad) and [Hecs](https://github.com/Ralith/hecs).
-
 [![License: MPL 2.0](https://img.shields.io/badge/License-MPL_2.0-brightgreen.svg)](https://opensource.org/licenses/MPL-2.0)
 
-[Foxvoid Platform](https://github.com/foxvoid-studio) • [Documentation](https://docs.foxvoid.com) • [Discord](https://discord.gg/placeholder)
-
-</div>
-
----
-
-## ⚡ What is Fantasy Craft?
+[![Rust](https://img.shields.io/badge/Rust-1.75+-000000?logo=rust&logoColor=white)](https://www.rust-lang.org/)
+[![Macroquad](https://img.shields.io/badge/Macroquad-0.4-C63527)](https://macroquad.rs/)
+[![Hecs](https://img.shields.io/badge/Hecs-ECS-005571)](https://github.com/Ralith/hecs)
+[![Parry2d](https://img.shields.io/badge/Parry2d-Physics-blueviolet)](https://github.com/dimforge/parry)
+[![WebAssembly](https://img.shields.io/badge/WASM-Ready-654FF0?logo=webassembly&logoColor=white)](https://webassembly.org/)
 
 **Fantasy Craft** is a 2D/2.5D game engine designed for developers who love **Rust** but hate bloat.
 

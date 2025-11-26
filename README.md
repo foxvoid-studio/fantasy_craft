@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![Fantasy Craft Logo](https://via.placeholder.com/150?text=FC) <!-- Replace with your actual logo URL -->
+![Fantasy Craft Banner](https://placehold.co/1200x300/1a1a1a/ff6b00?text=Fantasy+Craft&font=montserrat)
 
 **The lightweight, data-oriented Rust game engine built for the Web.**
 <br>
@@ -67,7 +67,7 @@ Fantasy Craft stands on the shoulders of giants. We believe in composing the bes
 | **Physics** | `parry2d` | Geometric queries and collision detection. |
 | **Networking** | `reqwest` (WASM) | HTTP client for talking to the Foxvoid Backend. |
 
-## ⚖️ License
+## 📄 License
 
 Fantasy Craft is licensed under the Mozilla Public License 2.0 (MPL-2.0).
 

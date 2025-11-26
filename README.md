@@ -67,9 +67,9 @@ Fantasy Craft is licensed under the Mozilla Public License 2.0 (MPL-2.0).
 
 What does this mean for you?
 
-    ✅ Commercial Use: You can use this engine to build and sell closed-source games. You keep 100% of your game code rights.
+   ✅ Commercial Use: You can use this engine to build and sell closed-source games. You keep 100% of your game code rights.
 
-    🔄 Modifications: If you modify the source code of the engine itself, you must share those modifications back to the community.
+   🔄 Modifications: If you modify the source code of the engine itself, you must share those modifications back to the community.
 
 See LICENSE for more details.
 

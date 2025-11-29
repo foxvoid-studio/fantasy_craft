@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-// We remove std::fs because it is not supported in WASM
 use macroquad::prelude::*;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -8,14 +7,38 @@ pub enum InputVariant {
     Mouse(MouseButton)
 }
 
-#[derive(Default)]
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum KeyboardLayout {
+    Qwerty,
+    Azerty,
+}
+
 pub struct InputManager {
-    bindings: HashMap<String, Vec<InputVariant>>
+    bindings: HashMap<String, Vec<InputVariant>>,
+    /// Layout is used to adapt key interpretation on Native targets.
+    /// On Web, we ignore this because browsers send physical scancodes.
+    pub layout: KeyboardLayout,
+}
+
+impl Default for InputManager {
+    fn default() -> Self {
+        Self {
+            bindings: HashMap::new(),
+            layout: KeyboardLayout::Qwerty, // Default standard
+        }
+    }
 }
 
 impl InputManager {
     pub fn new() -> Self {
         Self::default()
+    }
+
+    pub fn set_layout(&mut self, layout: KeyboardLayout) {
+        self.layout = layout;
+        // Ideally, we should reload bindings here if they were already loaded,
+        // but for simplicity, we assume set_layout is called before loading config.
+        info!("InputManager: Keyboard layout set to {:?}", layout);
     }
 
     pub fn bind(&mut self, action: &str, input: InputVariant) {
@@ -26,10 +49,7 @@ impl InputManager {
     }
 
     /// Loads bindings from a JSON string content.
-    /// This method is platform-agnostic (works on PC and Web).
-    /// The file reading must be done by the caller (App.rs) using load_string().
     pub fn load_from_string(&mut self, json_content: &str) {
-        // We use match to handle errors gracefully without crashing the game
         let json_bindings: HashMap<String, Vec<String>> = match serde_json::from_str(json_content) {
             Ok(data) => data,
             Err(e) => {
@@ -38,19 +58,23 @@ impl InputManager {
             }
         };
 
+        // Clear existing bindings to avoid duplicates if reloading
+        self.bindings.clear();
+
         for (action, inputs) in json_bindings {
             for input_str in inputs {
-                if let Some(variant) = self.parse_input_string(&input_str) {
-                    self.bind(&action, variant)
-                }
-                else {
-                    // Use error!/warn! macro for better logging in WASM console
+                let variants = self.parse_input_string(&input_str);
+                
+                if variants.is_empty() {
                     warn!("InputManager: Unknown input key '{}' for action '{}'", input_str, action);
+                }
+
+                for variant in variants {
+                    self.bind(&action, variant);
                 }
             }
         }
-
-        info!("InputManager: Bindings loaded successfully.");
+        info!("InputManager: Bindings loaded.");
     }
 
     pub fn is_action_down(&self, action: &str) -> bool {
@@ -77,69 +101,126 @@ impl InputManager {
         false
     }
 
-    fn parse_input_string(&self, s: &str) -> Option<InputVariant> {
+    /// Converts a string representation of a key to a LIST of Macroquad InputVariants.
+    fn parse_input_string(&self, s: &str) -> Vec<InputVariant> {
+        let mut variants = Vec::new();
+
+        // Helper to check if we are in a context where remapping is needed
+        // On WASM, we trust physical keys (Browser KeyCodes).
+        // On Native, we respect the user's Layout setting.
+        let use_azerty_mapping = {
+            #[cfg(target_arch = "wasm32")]
+            { false }
+            #[cfg(not(target_arch = "wasm32"))]
+            { self.layout == KeyboardLayout::Azerty }
+        };
+
         match s {
             // Mouse
-            "MouseLeft" => Some(InputVariant::Mouse(MouseButton::Left)),
-            "MouseRight" => Some(InputVariant::Mouse(MouseButton::Right)),
-            "MouseMiddle" => Some(InputVariant::Mouse(MouseButton::Middle)),
+            "MouseLeft" => variants.push(InputVariant::Mouse(MouseButton::Left)),
+            "MouseRight" => variants.push(InputVariant::Mouse(MouseButton::Right)),
+            "MouseMiddle" => variants.push(InputVariant::Mouse(MouseButton::Middle)),
             
-            // Common Keys
-            "Space" => Some(InputVariant::Key(KeyCode::Space)),
-            "Escape" => Some(InputVariant::Key(KeyCode::Escape)),
-            "Enter" => Some(InputVariant::Key(KeyCode::Enter)),
-            "Tab" => Some(InputVariant::Key(KeyCode::Tab)),
-            "LeftShift" => Some(InputVariant::Key(KeyCode::LeftShift)),
-            "RightShift" => Some(InputVariant::Key(KeyCode::RightShift)),
-            "LeftControl" => Some(InputVariant::Key(KeyCode::LeftControl)),
+            // --- MOVEMENT KEYS REMAPPING ---
+            // The JSON config should use standard QWERTY names ("W", "A", "S", "D")
             
-            // Arrows
-            "Up" => Some(InputVariant::Key(KeyCode::Up)),
-            "Down" => Some(InputVariant::Key(KeyCode::Down)),
-            "Left" => Some(InputVariant::Key(KeyCode::Left)),
-            "Right" => Some(InputVariant::Key(KeyCode::Right)),
+            "W" | "ScanCodeW" => {
+                if use_azerty_mapping {
+                    variants.push(InputVariant::Key(KeyCode::Z)); // Native AZERTY
+                } else {
+                    variants.push(InputVariant::Key(KeyCode::W)); // Native QWERTY or Web
+                }
+            },
             
-            // Letters
-            "A" => Some(InputVariant::Key(KeyCode::A)),
-            "B" => Some(InputVariant::Key(KeyCode::B)),
-            "C" => Some(InputVariant::Key(KeyCode::C)),
-            "D" => Some(InputVariant::Key(KeyCode::D)),
-            "E" => Some(InputVariant::Key(KeyCode::E)),
-            "F" => Some(InputVariant::Key(KeyCode::F)),
-            "G" => Some(InputVariant::Key(KeyCode::G)),
-            "H" => Some(InputVariant::Key(KeyCode::H)),
-            "I" => Some(InputVariant::Key(KeyCode::I)),
-            "J" => Some(InputVariant::Key(KeyCode::J)),
-            "K" => Some(InputVariant::Key(KeyCode::K)),
-            "L" => Some(InputVariant::Key(KeyCode::L)),
-            "M" => Some(InputVariant::Key(KeyCode::M)),
-            "N" => Some(InputVariant::Key(KeyCode::N)),
-            "O" => Some(InputVariant::Key(KeyCode::O)),
-            "P" => Some(InputVariant::Key(KeyCode::P)),
-            "Q" => Some(InputVariant::Key(KeyCode::Q)),
-            "R" => Some(InputVariant::Key(KeyCode::R)),
-            "S" => Some(InputVariant::Key(KeyCode::S)),
-            "T" => Some(InputVariant::Key(KeyCode::T)),
-            "U" => Some(InputVariant::Key(KeyCode::U)),
-            "V" => Some(InputVariant::Key(KeyCode::V)),
-            "W" => Some(InputVariant::Key(KeyCode::W)),
-            "X" => Some(InputVariant::Key(KeyCode::X)),
-            "Y" => Some(InputVariant::Key(KeyCode::Y)),
-            "Z" => Some(InputVariant::Key(KeyCode::Z)),
+            "A" | "ScanCodeA" => {
+                if use_azerty_mapping {
+                    variants.push(InputVariant::Key(KeyCode::Q));
+                } else {
+                    variants.push(InputVariant::Key(KeyCode::A));
+                }
+            },
 
-            // Numbers
-            "0" => Some(InputVariant::Key(KeyCode::Key0)),
-            "1" => Some(InputVariant::Key(KeyCode::Key1)),
-            "2" => Some(InputVariant::Key(KeyCode::Key2)),
-            "3" => Some(InputVariant::Key(KeyCode::Key3)),
-            "4" => Some(InputVariant::Key(KeyCode::Key4)),
-            "5" => Some(InputVariant::Key(KeyCode::Key5)),
-            "6" => Some(InputVariant::Key(KeyCode::Key6)),
-            "7" => Some(InputVariant::Key(KeyCode::Key7)),
-            "8" => Some(InputVariant::Key(KeyCode::Key8)),
-            "9" => Some(InputVariant::Key(KeyCode::Key9)),
+            "Z" | "ScanCodeZ" => {
+                if use_azerty_mapping {
+                    variants.push(InputVariant::Key(KeyCode::W));
+                } else {
+                    variants.push(InputVariant::Key(KeyCode::Z));
+                }
+            },
 
-            _ => None,
-        }
+            "Q" | "ScanCodeQ" => {
+                if use_azerty_mapping {
+                    variants.push(InputVariant::Key(KeyCode::A));
+                } else {
+                    variants.push(InputVariant::Key(KeyCode::Q));
+                }
+            },
+            
+            "M" => {
+                if use_azerty_mapping {
+                     // M is tricky on AZERTY (it's to the right of L, often semicolon on US)
+                     // But usually M on AZERTY maps to KeyCode::Semicolon in some raw modes
+                     // or KeyCode::M. For simplicity, we assume M is M logic here or comma.
+                     // This often needs specific tweaking per OS.
+                     variants.push(InputVariant::Key(KeyCode::M));
+                } else {
+                     variants.push(InputVariant::Key(KeyCode::M));
+                }
+            },
+
+            // --- INVARIANTS ---
+            "S" | "ScanCodeS" => variants.push(InputVariant::Key(KeyCode::S)),
+            "D" | "ScanCodeD" => variants.push(InputVariant::Key(KeyCode::D)),
+            
+            "Space" => variants.push(InputVariant::Key(KeyCode::Space)),
+            "Escape" => variants.push(InputVariant::Key(KeyCode::Escape)),
+            "Enter" => variants.push(InputVariant::Key(KeyCode::Enter)),
+            "Tab" => variants.push(InputVariant::Key(KeyCode::Tab)),
+            "LeftShift" => variants.push(InputVariant::Key(KeyCode::LeftShift)),
+            "RightShift" => variants.push(InputVariant::Key(KeyCode::RightShift)),
+            "LeftControl" => variants.push(InputVariant::Key(KeyCode::LeftControl)),
+            "RightControl" => variants.push(InputVariant::Key(KeyCode::RightControl)),
+            
+            "Up" => variants.push(InputVariant::Key(KeyCode::Up)),
+            "Down" => variants.push(InputVariant::Key(KeyCode::Down)),
+            "Left" => variants.push(InputVariant::Key(KeyCode::Left)),
+            "Right" => variants.push(InputVariant::Key(KeyCode::Right)),
+            
+            // Letters (simplified)
+            "B" => variants.push(InputVariant::Key(KeyCode::B)),
+            "C" => variants.push(InputVariant::Key(KeyCode::C)),
+            "E" => variants.push(InputVariant::Key(KeyCode::E)),
+            "F" => variants.push(InputVariant::Key(KeyCode::F)),
+            "G" => variants.push(InputVariant::Key(KeyCode::G)),
+            "H" => variants.push(InputVariant::Key(KeyCode::H)),
+            "I" => variants.push(InputVariant::Key(KeyCode::I)),
+            "J" => variants.push(InputVariant::Key(KeyCode::J)),
+            "K" => variants.push(InputVariant::Key(KeyCode::K)),
+            "L" => variants.push(InputVariant::Key(KeyCode::L)),
+            "N" => variants.push(InputVariant::Key(KeyCode::N)),
+            "O" => variants.push(InputVariant::Key(KeyCode::O)),
+            "P" => variants.push(InputVariant::Key(KeyCode::P)),
+            "R" => variants.push(InputVariant::Key(KeyCode::R)),
+            "T" => variants.push(InputVariant::Key(KeyCode::T)),
+            "U" => variants.push(InputVariant::Key(KeyCode::U)),
+            "V" => variants.push(InputVariant::Key(KeyCode::V)),
+            "X" => variants.push(InputVariant::Key(KeyCode::X)),
+            "Y" => variants.push(InputVariant::Key(KeyCode::Y)),
+
+            "0" => variants.push(InputVariant::Key(KeyCode::Key0)),
+            "1" => variants.push(InputVariant::Key(KeyCode::Key1)),
+            "2" => variants.push(InputVariant::Key(KeyCode::Key2)),
+            "3" => variants.push(InputVariant::Key(KeyCode::Key3)),
+            "4" => variants.push(InputVariant::Key(KeyCode::Key4)),
+            "5" => variants.push(InputVariant::Key(KeyCode::Key5)),
+            "6" => variants.push(InputVariant::Key(KeyCode::Key6)),
+            "7" => variants.push(InputVariant::Key(KeyCode::Key7)),
+            "8" => variants.push(InputVariant::Key(KeyCode::Key8)),
+            "9" => variants.push(InputVariant::Key(KeyCode::Key9)),
+
+            _ => {},
+        };
+        
+        variants
     }
 }

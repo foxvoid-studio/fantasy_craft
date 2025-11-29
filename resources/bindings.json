@@ -1,7 +1,7 @@
 {
-    "MoveUp": ["Z", "Up"],
+    "MoveUp": ["W", "Up"],
     "MoveDown": ["S", "Down"],
-    "MoveLeft": ["Q", "Left"],
+    "MoveLeft": ["A", "Left"],
     "MoveRight": ["D", "Right"],
     "Menu": ["Escape"]
 }
